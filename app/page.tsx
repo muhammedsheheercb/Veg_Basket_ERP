@@ -2,12 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { Bell, Boxes, ChevronDown, ChevronRight, FileText, HandCoins, Home, LayoutList, Menu, MoreHorizontal, PackagePlus, Search, Settings, ShoppingCart, Truck, Users, WalletCards, X } from 'lucide-react';
+import { Bell, Boxes, ChevronDown, ChevronRight, FileText, HandCoins, HardHat, Home, Landmark, LayoutList, Menu, MoreHorizontal, PackagePlus, Search, Settings, ShoppingCart, Truck, Users, WalletCards, X } from 'lucide-react';
 
 const money = (value: number) => `AED ${value.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`;
 const sales = Array(12).fill(0);
 const purchases = Array(12).fill(0);
-const nav = [{ label: 'Dashboard', icon: Home }, { label: 'Sales', icon: FileText }, { label: 'Purchases', icon: ShoppingCart }, { label: 'Suppliers', icon: Truck }, { label: 'Customers', icon: Users }, { label: 'Items', icon: Boxes }, { label: 'Expenses', icon: WalletCards }, { label: 'Reports', icon: LayoutList }];
+const nav = [
+  { label: 'Dashboard', icon: Home, href: '/' },
+  { label: 'Sales', icon: FileText, href: '/sales' },
+  { label: 'Purchases', icon: ShoppingCart, href: '/purchases' },
+  { label: 'Suppliers', icon: Truck, href: '/suppliers' },
+  { label: 'Customers', icon: Users, href: '/customers' },
+  { label: 'Items', icon: Boxes, href: '/items' },
+  { label: 'Workers', icon: HardHat, href: '/workers' },
+  { label: 'Expenses', icon: WalletCards, href: '/expenses' },
+  { label: 'Loans', icon: Landmark, href: '/loans' },
+  { label: 'Reports', icon: LayoutList, href: '#' }
+];
 const transactions: [string, string, string, number, string][] = [];
 
 function Logo() { return <div className="brand"><Image src="/images/logo.webp" alt="Veg Basket" width={38} height={42} priority /></div> }
@@ -21,7 +32,7 @@ export default function Dashboard() {
   return <main className="app-shell">
     <aside className={`sidebar ${mobileNav ? 'open' : ''}`}>
       <div className="side-top"><Logo /><button className="close-nav" onClick={() => setMobileNav(false)}><X size={19}/></button></div>
-      <nav>{nav.map(({ label, icon: Icon }) => <button key={label} onClick={() => { if (label === 'Suppliers') window.location.assign('/suppliers'); if (label === 'Purchases') window.location.assign('/purchases'); setActive(label); setMobileNav(false); }} className={active === label ? 'active' : ''}><Icon size={17}/><span>{label}</span></button>)}</nav>
+      <nav>{nav.map(({ label, icon: Icon, href }) => <button key={label} onClick={() => { if (href && href !== '#') window.location.assign(href); setActive(label); setMobileNav(false); }} className={active === label ? 'active' : ''}><Icon size={17}/><span>{label}</span></button>)}</nav>
       <div className="side-bottom"><button><Settings size={17}/><span>Settings</span></button><div className="help">Need help? <b>Contact support</b></div></div>
     </aside>
     {mobileNav && <button className="backdrop" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
