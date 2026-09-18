@@ -1,0 +1,5 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { authenticate, SESSION_COOKIE, signSession } from '@/lib/auth';
+const bodySchema = z.object({ email: z.string().email().max(254), password: z.string().min(8).max(128) });
+export async function POST(request: Request) { try { const payload = bodySchema.safeParse(await request.json()); if (!payload.success) return NextResponse.json({ error: 'Enter a valid email and password.' }, { status: 400 }); const session = await authenticate(payload.data.email, payload.data.password); if (!session) return NextResponse.json({ error: 'Incorrect email or password.' }, { status: 401 }); const response = NextResponse.json({ user: { name: session.name, role: session.role } }); response.cookies.set(SESSION_COOKIE, await signSession(session), { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 }); return response; } catch { return NextResponse.json({ error: 'Unable to sign in. Please try again.' }, { status: 500 }); } }

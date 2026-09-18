@@ -1,0 +1,36 @@
+{
+  "name": "veg-basket-erp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "setup-admin": "node --env-file=.env scripts/setup-admin.mjs",
+    "db:migrate-payment-idempotency": "node --env-file=.env scripts/migrate-payment-idempotency.mjs",
+    "db:migrate-customer-sales-workers": "node --env-file=.env scripts/migrate-customer-sales-workers.mjs",
+    "db:migrate-loans": "node --env-file=.env scripts/migrate-loans.mjs"
+  },
+  "dependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.12",
+    "lucide-react": "^0.468.0",
+    "next": "latest",
+    "pg": "^8.23.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "latest",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.10",
+    "tailwindcss": "latest"
+  }
+}

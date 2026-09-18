@@ -1,0 +1,10 @@
+import pg from 'pg';
+const connectionString=process.env.DATABASE_URL;
+if(!connectionString)throw new Error('DATABASE_URL is required.');
+const client=new pg.Client({connectionString,ssl:connectionString.includes('localhost')?false:{rejectUnauthorized:false}});
+await client.connect();
+await client.query('ALTER TABLE supplier_payments ADD COLUMN IF NOT EXISTS idempotency_key text');
+await client.query('CREATE UNIQUE INDEX IF NOT EXISTS supplier_payments_idempotency_key_unique ON supplier_payments(idempotency_key) WHERE idempotency_key IS NOT NULL');
+await client.query('CREATE TABLE IF NOT EXISTS mutation_requests (idempotency_key text PRIMARY KEY, created_at timestamp NOT NULL DEFAULT now())');
+await client.end();
+console.log('Supplier payment idempotency migration complete.');

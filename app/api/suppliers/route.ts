@@ -1,0 +1,8 @@
+import { NextResponse } from 'next/server';
+import { asc, eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { db } from '@/lib/db';
+import { purchases, supplierPayments, suppliers } from '@/lib/schema';
+const schema = z.object({ name:z.string().trim().min(1).max(150), mobile:z.string().trim().min(5).max(30), address:z.string().trim().max(500).optional(), openingBalance:z.coerce.number().min(0) });
+export async function GET(){try{const rows=await db.select({id:suppliers.id,name:suppliers.name,mobile:suppliers.mobile,address:suppliers.address,openingBalance:suppliers.openingBalance,active:suppliers.active,totalPurchases:sql<string>`coalesce(sum(${purchases.total}),0)`,totalPaid:sql<string>`coalesce(sum(${purchases.paid}),0)`}).from(suppliers).leftJoin(purchases,eq(purchases.supplierId,suppliers.id)).groupBy(suppliers.id).orderBy(asc(suppliers.name));return NextResponse.json(rows.map(r=>({...r,payable:Number(r.openingBalance)+Number(r.totalPurchases)-Number(r.totalPaid)})));}catch{return NextResponse.json({error:'Unable to load suppliers.'},{status:503})}}
+export async function POST(request:Request){const parsed=schema.safeParse(await request.json());if(!parsed.success)return NextResponse.json({error:'Enter a supplier name, valid mobile number, and non-negative opening balance.'},{status:400});try{const [supplier]=await db.insert(suppliers).values({name:parsed.data.name,mobile:parsed.data.mobile,address:parsed.data.address||null,openingBalance:String(parsed.data.openingBalance)}).returning();return NextResponse.json(supplier,{status:201});}catch{return NextResponse.json({error:'Unable to save supplier.'},{status:500})}}

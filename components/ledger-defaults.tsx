@@ -1,0 +1,3 @@
+'use client';
+import {useEffect} from 'react';
+export function LedgerDefaults(){useEffect(()=>{const apply=()=>{const today=new Date().toISOString().slice(0,10);document.querySelectorAll<HTMLInputElement>('input[type="date"]').forEach(input=>{input.max=today;if(!input.value)input.value=today});document.querySelectorAll<HTMLInputElement>('input[name="code"]').forEach(input=>{if(!input.value&&!input.disabled)input.value=`ITM-${Date.now().toString().slice(-6)}`;input.readOnly=true;input.setAttribute('aria-readonly','true')})};apply();const observer=new MutationObserver(apply);observer.observe(document.body,{childList:true,subtree:true});return()=>observer.disconnect()},[]);return null}
