@@ -3,6 +3,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
 import {
   AlertCircle,
   Calendar,
@@ -13,7 +14,6 @@ import {
   Pencil,
   Plus,
   Printer,
-  Search,
   Trash2,
   Undo2,
   WalletCards,
@@ -68,7 +68,6 @@ const today = new Date().toISOString().slice(0, 10);
 export default function LoansPage() {
   const [rows, setRows] = useState<LoanRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'settled'>('all');
 
   // Modals
@@ -126,20 +125,21 @@ export default function LoansPage() {
   // Filtered Rows
   const filtered = useMemo(() => {
     return rows.filter((r) => {
-      const matchesSearch =
-        !search.trim() ||
-        r.name.toLowerCase().includes(search.toLowerCase()) ||
-        (r.description && r.description.toLowerCase().includes(search.toLowerCase()));
-
       const isSettled = Number(r.outstanding || 0) <= 0.005;
       const matchesStatus =
         statusFilter === 'all' ||
         (statusFilter === 'active' && !isSettled) ||
         (statusFilter === 'settled' && isSettled);
 
-      return matchesSearch && matchesStatus;
+      return matchesStatus;
     });
-  }, [rows, search, statusFilter]);
+  }, [rows, statusFilter]);
+
+  const controls = useListControls(
+    filtered,
+    (loan) => `${loan.name} ${loan.description || ''}`,
+    (loan) => loan.date
+  );
 
   // Fetch single loan detail
   const openDetail = async (id: string) => {
@@ -365,15 +365,7 @@ export default function LoansPage() {
       <section className="card data-panel no-print">
         {/* Filters and Search */}
         <div className="loan-filters">
-          <div className="loan-search-input">
-            <Search size={15} className="loan-search-icon" />
-            <input
-              type="text"
-              placeholder="Search by lender or notes…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+          <ListFilters controls={controls} dateFilter placeholder="Search lender or loan notes…" />
 
           <select
             className="loan-filter-select"
@@ -385,11 +377,11 @@ export default function LoansPage() {
             <option value="settled">Settled Loans ({rows.filter((r) => Number(r.outstanding) <= 0.005).length})</option>
           </select>
 
-          {(search || statusFilter !== 'all') && (
+          {(controls.hasFilters || statusFilter !== 'all') && (
             <button
               className="outline"
               onClick={() => {
-                setSearch('');
+                controls.reset();
                 setStatusFilter('all');
               }}
             >
@@ -411,7 +403,7 @@ export default function LoansPage() {
             <span style={{ textAlign: 'right' }}>Actions</span>
           </div>
 
-          {filtered.map((x) => {
+          {controls.pageRows.map((x) => {
             const original = Number(x.original || x.outstanding || 0);
             const paid = Number(x.paid || 0);
             const outstanding = Number(x.outstanding || 0);
@@ -549,13 +541,16 @@ export default function LoansPage() {
             );
           })}
 
-          {!loading && filtered.length === 0 && (
+          {!loading && controls.filtered.length === 0 && (
             <p className="empty" style={{ padding: '36px 0' }}>
               {rows.length === 0
                 ? 'No loans recorded yet. Click "Add loan" to record your first loan.'
                 : 'No loans match your search or filter.'}
             </p>
           )}
+        </div>
+        <div className="list-footer-pagination">
+          <ListPagination controls={controls} />
         </div>
       </section>
 
