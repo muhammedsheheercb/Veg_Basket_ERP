@@ -52,7 +52,7 @@ export function MobileNavigation() {
 
   return (
     <>
-      <nav className="global-bottom-nav no-print" aria-label="Primary navigation">
+      <nav className="global-bottom-nav no-print" aria-label="Primary navigation" suppressHydrationWarning>
         {primaryItems.map(([label, href, Icon]) => {
           const active = href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
           return (
