@@ -6,6 +6,7 @@ import { LedgerDefaults } from '@/components/ledger-defaults';
 import { DeleteConfirmation } from '@/components/delete-confirmation';
 import { LegacyListControls } from '@/components/legacy-list-controls';
 import { NetworkStatus } from '@/components/network-status';
+import { NativeFilterPickerUpgrade } from '@/components/native-filter-picker-upgrade';
 
 export const metadata: Metadata = { title: 'Veg Basket', description: 'UAE vegetable trading ERP', applicationName: 'Veg Basket' };
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="en"><body><RouteSidebar /><MutationGuard /><LedgerDefaults /><DeleteConfirmation /><NetworkStatus /><LegacyListControls />{children}</body></html>; }
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="en"><body><RouteSidebar /><MutationGuard /><LedgerDefaults /><DeleteConfirmation /><NetworkStatus /><LegacyListControls /><NativeFilterPickerUpgrade />{children}</body></html>; }

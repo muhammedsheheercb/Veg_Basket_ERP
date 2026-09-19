@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react';
+import { DateRangePicker, MonthPicker } from '@/components/filter-date-pickers';
 
 const PAGE_SIZE = 10;
 
@@ -10,6 +11,7 @@ export function useListControls<T>(rows: T[], searchText: (row: T) => string, da
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [month, setMonth] = useState('');
   const [page, setPage] = useState(1);
 
   // Filtering local, already-loaded rows is inexpensive. Apply it immediately
@@ -19,14 +21,14 @@ export function useListControls<T>(rows: T[], searchText: (row: T) => string, da
     setDebouncedQuery(value.trim().toLowerCase());
     setPage(1);
   };
-  useEffect(() => setPage(1), [from, to]);
+  useEffect(() => setPage(1), [from, to, month]);
   useEffect(() => setPage(1), [rows]);
 
   const filtered = useMemo(() => rows.filter((row) => {
     const matchesSearch = !debouncedQuery || searchText(row).toLowerCase().includes(debouncedQuery);
     const date = dateValue?.(row) || '';
-    return matchesSearch && (!from || date >= from) && (!to || date <= to);
-  }), [rows, debouncedQuery, from, to, searchText, dateValue]);
+    return matchesSearch && (!from || date >= from) && (!to || date <= to) && (!month || date.startsWith(month));
+  }), [rows, debouncedQuery, from, to, month, searchText, dateValue]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -34,15 +36,15 @@ export function useListControls<T>(rows: T[], searchText: (row: T) => string, da
     if (page > pageCount) setPage(pageCount);
   }, [page, pageCount]);
   const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const reset = () => { setQuery(''); setDebouncedQuery(''); setFrom(''); setTo(''); setPage(1); };
+  const reset = () => { setQuery(''); setDebouncedQuery(''); setFrom(''); setTo(''); setMonth(''); setPage(1); };
 
-  return { query, setQuery: updateQuery, from, setFrom, to, setTo, page: currentPage, setPage, filtered, pageRows, pageCount, reset, hasFilters: !!(query || from || to) };
+  return { query, setQuery: updateQuery, from, setFrom, to, setTo, month, setMonth, page: currentPage, setPage, filtered, pageRows, pageCount, reset, hasFilters: !!(query || from || to || month) };
 }
 
 export function ListFilters({ controls, dateFilter = false, placeholder = 'Search records…' }: { controls: any; dateFilter?: boolean; placeholder?: string }) {
   return <div className="list-filters">
     <label className="list-search"><Search size={16} /><input type="search" value={controls.query} onChange={(event) => controls.setQuery(event.target.value)} placeholder={placeholder} /></label>
-    {dateFilter && <><input aria-label="From date" type="date" value={controls.from} onChange={(event) => controls.setFrom(event.target.value)} /><input aria-label="To date" type="date" value={controls.to} onChange={(event) => controls.setTo(event.target.value)} /></>}
+    {dateFilter && <><DateRangePicker from={controls.from} to={controls.to} onChange={(from, to) => { controls.setFrom(from); controls.setTo(to); }} /><MonthPicker value={controls.month} onChange={controls.setMonth} /></>}
     {controls.hasFilters && <button type="button" className="outline" onClick={controls.reset}>Clear filters</button>}
   </div>;
 }

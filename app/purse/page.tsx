@@ -20,6 +20,7 @@ import {
 import { AppSidebar } from '@/components/app-sidebar';
 import { MobileNavigation } from '@/components/mobile-navigation';
 import { money, shortDate } from '@/components/financial-documents';
+import { DateRangePicker, MonthPicker } from '@/components/filter-date-pickers';
 
 type DatePreset = 'today' | 'yesterday' | 'custom' | 'date_range' | 'all';
 
@@ -336,28 +337,15 @@ export default function MyPursePage() {
                 </button>
               ))}
 
-              <input
-                type="date"
-                className="reports-date-input"
-                aria-label="From Date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
+              <DateRangePicker
+                from={startDate}
+                to={endDate}
+                onChange={(from, to) => {
+                  setStartDate(from);
+                  setEndDate(to);
                   setPreset('custom');
                   setSelectedMonth('');
-                  setPage(1);
-                }}
-              />
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>to</span>
-              <input
-                type="date"
-                className="reports-date-input"
-                aria-label="To Date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setPreset('custom');
-                  setSelectedMonth('');
+                  setSelectedYear('');
                   setPage(1);
                 }}
               />
@@ -371,39 +359,15 @@ export default function MyPursePage() {
               <span>Filter by Month / Year</span>
             </div>
             <div className="purse-filter-row">
-              <select
-                className="reports-select-input"
-                aria-label="Select Month"
-                value={selectedMonth}
-                onChange={(e) => handleMonthChange(e.target.value)}
-              >
-                <option value="">All Months</option>
-                <option value="1">January</option>
-                <option value="2">February</option>
-                <option value="3">March</option>
-                <option value="4">April</option>
-                <option value="5">May</option>
-                <option value="6">June</option>
-                <option value="7">July</option>
-                <option value="8">August</option>
-                <option value="9">September</option>
-                <option value="10">October</option>
-                <option value="11">November</option>
-                <option value="12">December</option>
-              </select>
-
-              <select
-                className="reports-select-input"
-                aria-label="Select Year"
-                value={selectedYear}
-                onChange={(e) => handleYearChange(e.target.value)}
-              >
-                <option value="">All Years</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-                <option value="2027">2027</option>
-              </select>
+              <MonthPicker
+                value={selectedMonth ? `${selectedYear || new Date().getFullYear()}-${selectedMonth.padStart(2, '0')}` : ''}
+                onChange={(value) => {
+                  if (!value) { setSelectedMonth(''); setSelectedYear(''); setPage(1); return; }
+                  const [year, month] = value.split('-');
+                  setSelectedYear(year);
+                  handleMonthChange(String(Number(month)));
+                }}
+              />
             </div>
           </div>
 

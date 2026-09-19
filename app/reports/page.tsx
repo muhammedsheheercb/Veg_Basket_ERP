@@ -27,6 +27,7 @@ import {
 import { AppSidebar } from '@/components/app-sidebar';
 import { MobileNavigation } from '@/components/mobile-navigation';
 import { money, shortDate } from '@/components/financial-documents';
+import { DateRangePicker, MonthPicker } from '@/components/filter-date-pickers';
 
 type ReportType =
   | 'sales'
@@ -115,6 +116,7 @@ export default function ReportsPage() {
   const [preset, setPreset] = useState<DatePreset>('this_month');
   const [startDate, setStartDate] = useState(() => `${new Date().toISOString().slice(0, 7)}-01`);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [workerFilter, setWorkerFilter] = useState('All');
@@ -144,6 +146,7 @@ export default function ReportsPage() {
 
   const handlePresetChange = (newPreset: DatePreset) => {
     setPreset(newPreset);
+    setSelectedMonth('');
     if (newPreset !== 'custom') {
       const dates = getPresetDates(newPreset);
       setStartDate(dates.startDate);
@@ -317,30 +320,8 @@ export default function ReportsPage() {
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Calendar size={15} style={{ color: '#64748b' }} />
-              <input
-                type="date"
-                className="reports-date-input"
-                aria-label="From Date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setPreset('custom');
-                }}
-              />
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>to</span>
-              <input
-                type="date"
-                className="reports-date-input"
-                aria-label="To Date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setPreset('custom');
-                }}
-              />
-            </div>
+            <DateRangePicker from={startDate} to={endDate} onChange={(from, to) => { setStartDate(from); setEndDate(to); setSelectedMonth(''); setPreset('custom'); }} />
+            <MonthPicker value={selectedMonth} onChange={(value) => { setSelectedMonth(value); if (!value) return; const [year, month] = value.split('-').map(Number); setStartDate(`${year}-${String(month).padStart(2, '0')}-01`); setEndDate(new Date(year, month, 0).toISOString().slice(0, 10)); setPreset('custom'); }} />
 
             {/* Type Specific Dropdowns */}
             {activeTab === 'expenses' && (
@@ -392,7 +373,7 @@ export default function ReportsPage() {
               </select>
             )}
 
-            {(search || preset !== 'this_month' || categoryFilter !== 'All' || workerFilter !== 'All' || methodFilter !== 'All') && (
+            {(search || preset !== 'this_month' || selectedMonth || categoryFilter !== 'All' || workerFilter !== 'All' || methodFilter !== 'All') && (
               <button
                 type="button"
                 className="reports-action-btn clear"
@@ -401,6 +382,7 @@ export default function ReportsPage() {
                   setCategoryFilter('All');
                   setWorkerFilter('All');
                   setMethodFilter('All');
+                  setSelectedMonth('');
                   handlePresetChange('this_month');
                 }}
               >
