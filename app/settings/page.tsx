@@ -10,8 +10,6 @@ import {
   ShieldCheck,
   User,
 } from 'lucide-react';
-import { AppSidebar } from '@/components/app-sidebar';
-import { MobileNavigation } from '@/components/mobile-navigation';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -186,7 +184,6 @@ export default function SettingsPage() {
 
   return (
     <div className="app-shell">
-      <AppSidebar active="Settings" />
 
       <main className="management">
         <header className="management-head">
@@ -299,7 +296,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h2 style={{ margin: '0 0 4px', fontSize: '18px', color: '#0f172a' }}>Business Details</h2>
-                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: '12px' }}>Shown automatically in the header of every newly viewed or printed sales invoice.</p>
+                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: '12px' }}>Shown automatically in the header of every newly viewed or downloaded sales invoice.</p>
                 </div>
               </div>
               {businessSuccess && <div className="form-error" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', color: '#047857', marginBottom: '16px' }}><CheckCircle2 size={16} /> {businessSuccess}</div>}
@@ -396,7 +393,6 @@ export default function SettingsPage() {
         )}
       </main>
 
-      <MobileNavigation />
     </div>
   );
 }

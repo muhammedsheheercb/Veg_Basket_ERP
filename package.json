@@ -14,6 +14,7 @@
     "db:migrate-business-settings": "node --env-file=.env scripts/migrate-business-settings.mjs"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.9.0",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",

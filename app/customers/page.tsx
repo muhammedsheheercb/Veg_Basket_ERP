@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Eye, Pencil, Plus, Printer, Trash2, WalletCards, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Download, Eye, Pencil, Plus, Trash2, WalletCards, X } from 'lucide-react';
+import { downloadPdf, downloadPdfFromElement } from '@/components/pdf-download';
 import { FinancialDocument, money } from '@/components/financial-documents';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
 
@@ -22,6 +23,17 @@ export default function Customers() {
   const controls = useListControls(rows, c => `${c.name} ${c.mobile} ${c.address || ''} ${c.outstanding || ''}`, () => null);
 
   const get = (id: string) => fetch('/api/customers/' + id).then(r => r.ok ? r.json() : null);
+
+  const downloadStatement = async (data: any) => {
+    const items: any[] = [];
+    if (+data.summary.openingBalance) items.push({ date: '', type: 'Opening Balance', reference: 'OPENING', description: 'Opening customer balance', amount: +data.summary.openingBalance, payment: 0 });
+    data.sales.forEach((sale: any) => { const later = data.payments.filter((payment: any) => payment.saleId === sale.id).reduce((sum: number, payment: any) => sum + +payment.amount, 0); const initial = +sale.paid - later; items.push({ date: sale.saleDate, type: 'Sale', reference: sale.invoiceNumber, description: 'Sales invoice', amount: +sale.total, payment: 0 }); if (initial > 0) items.push({ date: sale.saleDate, type: 'Initial Payment', reference: sale.invoiceNumber, description: `Initial payment for ${sale.invoiceNumber}`, amount: 0, payment: initial }); });
+    data.payments.forEach((payment: any) => { const sale = data.sales.find((x: any) => x.id === payment.saleId); items.push({ date: payment.paymentDate, type: 'Customer Payment', reference: sale?.invoiceNumber || 'PAYMENT', description: `Payment for ${sale?.invoiceNumber || 'account'}`, amount: 0, payment: +payment.amount }); });
+    items.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    let balance = 0;
+    const business = await fetch('/api/business-settings').then(r => r.ok ? r.json() : null).catch(() => null);
+    await downloadPdf({ kind: 'Customer Statement', title: 'Customer Statement', party: data.customer.name, business: [business?.address, business?.contactNumber, business?.email].filter(Boolean), summary: [['Opening Balance', money(data.summary.openingBalance)], ['Total Sales', money(data.summary.totalSales)], ['Total Payments', money(data.summary.totalPaid)], ['Outstanding Balance', money(data.summary.outstanding)]], headers: ['Date', 'Type', 'Reference', 'Description', 'Sale Amount', 'Payment', 'Balance', 'Method / Status'], rows: items.map(item => { balance += item.amount - item.payment; return [item.date || '—', item.type, item.reference, item.description, item.amount ? money(item.amount) : '—', item.payment ? money(item.payment) : '—', money(balance), '—']; }) }, `${data.customer.name}-statement.pdf`);
+  };
 
   const open = async (id: string) => {
     setError('');
@@ -135,6 +147,9 @@ export default function Customers() {
                 }}
               >
                 {loadingId === c.id + '-ledger' ? <span className="button-spinner" /> : <WalletCards size={16} />}
+              </button>
+              <button className="statement-download" title="Download customer statement PDF" onClick={async () => { const data = await get(c.id); if (data) await downloadStatement(data); }}>
+                <Download size={16} />
               </button>
             </span>
           </div>
@@ -271,6 +286,7 @@ function CustomerLedger({ ledger, close, selected, setSelected, sale, due, pay, 
 }
 
 function Statement({ ledger, close }: any) {
+  const statementRef = useRef<HTMLDivElement>(null);
   const items: any[] = [];
   const opening = +ledger.summary.openingBalance;
   if (opening) {
@@ -340,9 +356,9 @@ function Statement({ ledger, close }: any) {
       <section className="document-modal-card card">
         <button className="sheet-close no-print" onClick={close}><X /></button>
         <div className="document-actions no-print">
-          <button className="outline" onClick={() => window.print()}><Printer size={15} /> Print statement</button>
+          <button className="primary" title="Download PDF" aria-label="Download customer statement PDF" onClick={() => statementRef.current && downloadPdfFromElement(statementRef.current, `${ledger.customer.name}-statement.pdf`)}><Download size={15} /></button>
         </div>
-        <FinancialDocument
+        <div ref={statementRef}><FinancialDocument
           kind="Customer Statement"
           title={'Customer statement · ' + ledger.customer.name}
           party={ledger.customer.name}
@@ -355,7 +371,7 @@ function Statement({ ledger, close }: any) {
             ['Outstanding Balance', money(ledger.summary.outstanding)]
           ]}
           entries={entries}
-        />
+        /></div>
       </section>
     </div>
   );

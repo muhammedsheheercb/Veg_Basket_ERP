@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
   ArrowDownLeft,
@@ -15,7 +15,6 @@ import {
   HardHat,
   Landmark,
   LayoutList,
-  Printer,
   RefreshCw,
   Search,
   ShoppingCart,
@@ -24,10 +23,9 @@ import {
   WalletCards,
   X,
 } from 'lucide-react';
-import { AppSidebar } from '@/components/app-sidebar';
-import { MobileNavigation } from '@/components/mobile-navigation';
 import { money, shortDate } from '@/components/financial-documents';
 import { DateRangePicker, MonthPicker } from '@/components/filter-date-pickers';
+import { downloadPdfFromElement } from '@/components/pdf-download';
 
 type ReportType =
   | 'sales'
@@ -118,6 +116,7 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedMonth, setSelectedMonth] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [workerFilter, setWorkerFilter] = useState('All');
   const [methodFilter, setMethodFilter] = useState('All');
@@ -129,8 +128,16 @@ export default function ReportsPage() {
   // Workers dropdown list
   const [workersList, setWorkersList] = useState<Array<{ id: string; name: string }>>([]);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const reportRef = useRef<HTMLElement>(null);
   const [page, setPage] = useState(1);
   const pageSize = 15;
+
+  // Reports are fetched from the API, so avoid a round trip for every keypress
+  // while still keeping the input responsive on touch keyboards.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   // Load workers for worker filter dropdown
   useEffect(() => {
@@ -162,7 +169,7 @@ export default function ReportsPage() {
       params.set('type', activeTab);
       if (startDate) params.set('startDate', startDate);
       if (endDate) params.set('endDate', endDate);
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       if (activeTab === 'expenses' && categoryFilter !== 'All') params.set('category', categoryFilter);
       if (activeTab === 'worker_expenses' && workerFilter !== 'All') params.set('workerId', workerFilter);
       if (activeTab === 'payment_methods' && methodFilter !== 'All') params.set('paymentMethod', methodFilter);
@@ -179,7 +186,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, startDate, endDate, search, categoryFilter, workerFilter, methodFilter]);
+  }, [activeTab, startDate, endDate, debouncedSearch, categoryFilter, workerFilter, methodFilter]);
 
   useEffect(() => {
     fetchReport();
@@ -230,25 +237,23 @@ export default function ReportsPage() {
     exportToCsv(filename, headers, csvRows);
   };
 
-  const handleTriggerPrint = () => {
-    window.print();
+  const handleDownloadPdf = () => {
+    if (reportRef.current) void downloadPdfFromElement(reportRef.current, `${activeTabMeta.label.replaceAll(' ', '-').toLowerCase()}.pdf`);
   };
 
   return (
     <div className="app-shell">
-      <AppSidebar active="Reports" />
-
       <main className="management">
         <header className="management-head">
           <div>
             <p className="eyebrow">FINANCIAL ANALYTICS & LEDGERS</p>
             <h1>Business Reports</h1>
-            <p>Generate, filter, print, and export comprehensive business and financial statements.</p>
+            <p>Generate, filter, download, and export comprehensive business and financial statements.</p>
           </div>
           <div className="reports-actions-header">
-            <button className="reports-action-btn print" onClick={() => setPrintModalOpen(true)}>
-              <Printer size={16} />
-              <span>Print Statement</span>
+            <button className="reports-action-btn download" onClick={() => setPrintModalOpen(true)}>
+              <Download size={16} />
+              <span>Download PDF</span>
             </button>
             <button className="reports-action-btn export" onClick={handleExportCsv} disabled={!rows.length}>
               <Download size={16} />
@@ -821,7 +826,7 @@ export default function ReportsPage() {
           ) : error ? (
             <div style={{ padding: '30px', textAlign: 'center', color: '#b91c1c' }}>
               <p>{error}</p>
-              <button className="reports-action-btn print" onClick={() => fetchReport()}>
+              <button className="reports-action-btn clear" onClick={() => fetchReport()}>
                 Retry
               </button>
             </div>
@@ -1123,9 +1128,7 @@ export default function ReportsPage() {
         </section>
       </main>
 
-      <MobileNavigation />
-
-      {/* PRINTABLE FINANCIAL STATEMENT MODAL */}
+      {/* DOWNLOADABLE FINANCIAL STATEMENT MODAL */}
       {printModalOpen && (
         <div className="modal document-modal">
           <div className="modal-backdrop" onClick={() => setPrintModalOpen(false)} />
@@ -1134,13 +1137,13 @@ export default function ReportsPage() {
               <X size={18} />
             </button>
             <div className="document-actions">
-              <button type="button" className="primary" onClick={handleTriggerPrint}>
-                <Printer size={16} />
-                <span>Print Document</span>
+              <button type="button" className="primary" onClick={handleDownloadPdf}>
+                <Download size={16} />
+                <span>Download PDF</span>
               </button>
             </div>
 
-            <article className="financial-document">
+            <article ref={reportRef} className="financial-document branded-document">
               <header className="document-header">
                 <Image src="/images/logo.webp" alt="Veg Basket" width={62} height={68} />
                 <div>

@@ -1,8 +1,9 @@
 'use client';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Download, Eye, Pencil, Plus, Printer, Trash2, WalletCards, X } from 'lucide-react';
+import { Download, Eye, Pencil, Plus, Trash2, WalletCards, X } from 'lucide-react';
 import { FinancialDocument, downloadDocumentPdf, money, shortDate } from '@/components/financial-documents';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
+import { downloadPdf } from '@/components/pdf-download';
 
 type S = { id: string; name: string; mobile: string; address?: string; openingBalance: string; totalPurchases: string; totalPaid: string; payable: number };
 type Bill = { id: string; invoiceNumber: string; purchaseDate: string; description?: string; total: string; paid: string; paymentMethod?: string; notes?: string };
@@ -61,6 +62,10 @@ export default function Suppliers() {
     return r.ok ? r.json() : null;
   };
   const pdf = () => statementRef.current && downloadDocumentPdf(statementRef.current, `${(view || ledger)!.supplier.name}-statement.pdf`);
+  const downloadStatement = async (data: L) => {
+    const business = await fetch('/api/business-settings').then(r => r.ok ? r.json() : null).catch(() => null);
+    await downloadPdf({ kind: 'Supplier Statement', title: 'Supplier Statement', party: data.supplier.name, business: [business?.address, business?.contactNumber, business?.email].filter(Boolean), summary: [['Opening Balance', money(data.summary.openingBalance)], ['Total Purchases', money(data.summary.totalPurchases)], ['Total Payments', money(data.summary.totalPaid)], ['Current Outstanding', money(data.summary.payable)]], headers: ['Date', 'Type', 'Reference', 'Description', 'Purchase Amount', 'Payment', 'Balance', 'Method / Status'], rows: makeEntries(data).map(entry => [shortDate(entry.date), entry.type, entry.reference, entry.description, entry.purchase ? money(entry.purchase) : '—', entry.payment ? money(entry.payment) : '—', money(entry.balance), [entry.method, entry.status].filter(Boolean).join(' · ') || '—']) }, `${data.supplier.name}-statement.pdf`);
+  };
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -145,6 +150,9 @@ export default function Suppliers() {
                 >
                   {loadingId === s.id + '-ledger' ? <span className="button-spinner" /> : <WalletCards size={16} />}
                 </button>
+                <button className="statement-download" title="Download supplier statement PDF" onClick={async () => { const data = await get(s.id); if (data) await downloadStatement(data); }}>
+                  <Download size={16} />
+                </button>
               </span>
             </div>
           ))}
@@ -183,11 +191,8 @@ export default function Suppliers() {
               <X />
             </button>
             <div className="document-actions no-print">
-              <button className="outline" onClick={() => window.print()}>
-                <Printer size={15} /> Print
-              </button>
-              <button className="primary" onClick={pdf}>
-                <Download size={15} /> Download PDF
+              <button className="primary" title="Download PDF" aria-label="Download supplier statement PDF" onClick={pdf}>
+                <Download size={15} />
               </button>
             </div>
             <div ref={statementRef as any}>

@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
 import {
@@ -13,12 +13,12 @@ import {
   Landmark,
   Pencil,
   Plus,
-  Printer,
   Trash2,
   Undo2,
   WalletCards,
   X,
 } from 'lucide-react';
+import { downloadPdfFromElement } from '@/components/pdf-download';
 
 type LoanRow = {
   id: string;
@@ -78,6 +78,7 @@ export default function LoansPage() {
   const [deleteLoan, setDeleteLoan] = useState<LoanRow | null>(null);
   const [reversePayment, setReversePayment] = useState<{ loanId: string; payment: PaymentRow } | null>(null);
   const [printLoan, setPrintLoan] = useState<LoanDetail | null>(null);
+  const loanPrintRef = useRef<HTMLElement>(null);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -765,10 +766,10 @@ export default function LoansPage() {
               </div>
               <button
                 type="button"
-                className="loan-print-btn"
+                className="loan-download-btn"
                 onClick={() => setPrintLoan(detail)}
               >
-                <Printer size={14} /> Print Statement
+                <Download size={14} /> Download PDF
               </button>
             </div>
 
@@ -968,7 +969,7 @@ export default function LoansPage() {
 
       {/* PRINTABLE LOAN STATEMENT */}
       {printLoan && (
-        <section className="print-bill" style={{ display: 'block' }}>
+        <section ref={loanPrintRef} className="print-bill" style={{ display: 'block' }}>
           <div className="bill-header">
             <Image src="/images/logo.webp" alt="Veg Basket" width={72} height={80} priority />
             <div>
@@ -1056,8 +1057,8 @@ export default function LoansPage() {
           </footer>
 
           <div className="no-print" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-            <button className="primary" onClick={() => window.print()}>
-              <Printer size={16} /> Print Statement
+            <button className="primary" onClick={() => loanPrintRef.current && downloadPdfFromElement(loanPrintRef.current, `${printLoan.loan.lender}-loan-statement.pdf`)}>
+              <Download size={16} /> Download PDF
             </button>
             <button className="outline" onClick={() => setPrintLoan(null)}>
               Close

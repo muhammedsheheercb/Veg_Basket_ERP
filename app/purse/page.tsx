@@ -17,8 +17,6 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { AppSidebar } from '@/components/app-sidebar';
-import { MobileNavigation } from '@/components/mobile-navigation';
 import { money, shortDate } from '@/components/financial-documents';
 import { DateRangePicker, MonthPicker } from '@/components/filter-date-pickers';
 
@@ -222,7 +220,6 @@ export default function MyPursePage() {
 
   return (
     <div className="app-shell">
-      <AppSidebar active="My Purse" />
 
       <main className="management">
         <header className="management-head">
@@ -468,7 +465,7 @@ export default function MyPursePage() {
           ) : error ? (
             <div style={{ padding: '30px', textAlign: 'center', color: '#b91c1c' }}>
               <p>{error}</p>
-              <button className="reports-action-btn print" onClick={() => fetchPurseData()}>
+              <button className="reports-action-btn clear" onClick={() => fetchPurseData()}>
                 Retry
               </button>
             </div>
@@ -607,7 +604,6 @@ export default function MyPursePage() {
         </section>
       </main>
 
-      <MobileNavigation />
 
       {/* ADD MONEY MODAL */}
       {addModalOpen && (

@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useRef, useState, FormEvent } from 'react';
 import Image from 'next/image';
-import { CheckCircle2, Eye, FileText, Leaf, Mail, MapPin, Pencil, Phone, Plus, Printer, Trash2, WalletCards, X } from 'lucide-react';
+import { CheckCircle2, Download, Eye, FileText, Leaf, Mail, MapPin, Pencil, Phone, Plus, Trash2, WalletCards, X } from 'lucide-react';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
+import { downloadPdf, downloadPdfFromElement } from '@/components/pdf-download';
 
 type L = { itemId: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
 type R = { id: string; invoice: string; customer: string; date: string; total: string; paid: string };
@@ -44,7 +45,6 @@ export default function Sales() {
   const [discount, setDiscount] = useState('0.00');
   const [paid, setPaid] = useState('0.00');
   const [detail, setDetail] = useState<S | null>(null);
-  const [print, setPrint] = useState<S | null>(null);
   const [remove, setRemove] = useState<R | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,6 +65,20 @@ export default function Sales() {
   const get = async (id: string) => {
     const r = await fetch('/api/sales/' + id);
     return r.ok ? r.json() : null;
+  };
+
+  const downloadSale = async (sale: S) => {
+    const balance = Number(sale.total) - Number(sale.paid);
+    const business = await fetch('/api/business-settings').then(r => r.ok ? r.json() : null).catch(() => null);
+    await downloadPdf({
+      kind: 'Sales Invoice', title: sale.invoiceNumber, party: sale.customerName,
+      business: [business?.address, business?.contactNumber, business?.email].filter(Boolean),
+      sales: { date: sale.saleDate, status: balance <= 0 ? 'Paid' : Number(sale.paid) > 0 ? 'Partial' : 'Unpaid', method: sale.paymentMethod || '—', contact: sale.customerMobile || '', address: sale.customerAddress || '' },
+      summary: [['Subtotal', money(sale.subtotal)], ['Discount', money(sale.discount)], ['Grand Total', money(sale.total)], ['Paid Amount', money(sale.paid)], ['Balance Amount', money(balance)]],
+      headers: ['#', 'Item Description', 'Qty', 'Total (AED)'],
+      rows: sale.items.map((item, index) => [String(index + 1), `${item.itemCode} · ${item.itemName}`, `${Number(item.quantity)} ${item.unit || ''}`.trim(), Number(item.lineTotal).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
+      notes: sale.notes
+    }, `${sale.invoiceNumber}.pdf`);
   };
 
   const edit = async (r: R) => {
@@ -183,8 +197,8 @@ export default function Sales() {
               <button className="danger" title="Delete" onClick={() => { setError(''); setRemove(r); }}>
                 <Trash2 size={16} />
               </button>
-              <button title="Print" onClick={async () => setPrint(await get(r.id))}>
-                <Printer size={16} />
+              <button title="Download PDF" onClick={async () => { const sale = await get(r.id); if (sale) await downloadSale(sale); }}>
+                <Download size={16} />
               </button>
             </span>
           </div>
@@ -317,7 +331,7 @@ export default function Sales() {
         </div>
       )}
 
-      {detail && <Details sale={detail} close={() => setDetail(null)} print={() => { setPrint(detail); setDetail(null); }} />}
+      {detail && <Details sale={detail} close={() => setDetail(null)} print={() => { void downloadSale(detail); setDetail(null); }} />}
       {remove && (
         <div className="modal delete-confirm-modal">
           <div className="modal-backdrop" />
@@ -334,7 +348,6 @@ export default function Sales() {
           </section>
         </div>
       )}
-      {print && <Invoice sale={print} close={() => setPrint(null)} />}
     </main>
   );
 }
@@ -376,14 +389,14 @@ function Table({ sale }: { sale: S }) {
         <tbody>
           {sale.items.map((x, index) => (
             <tr key={x.id}>
-              <td className="item-index">{index + 1}</td>
-              <td>
+              <td data-label="#" className="item-index">{index + 1}</td>
+              <td data-label="Item Description">
                 {x.itemCode} · {x.itemName}
               </td>
-              <td className="num">
+              <td data-label="Qty" className="num">
                 {Number(x.quantity)} {x.unit || ''}
               </td>
-              <td className="num">{Number(x.lineTotal).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td data-label="Total (AED)" className="num">{Number(x.lineTotal).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
           ))}
         </tbody>
@@ -427,7 +440,7 @@ function Details({ sale, close, print }: { sale: S; close: () => void; print: ()
         <Table sale={sale} />
         <Totals subtotal={cent(sale.subtotal)} discount={sale.discount} paid={sale.paid} />
         <button className="primary" onClick={print}>
-          <Printer size={16} /> Print invoice
+          <Download size={16} /> Download PDF
         </button>
       </section>
     </div>
@@ -436,6 +449,7 @@ function Details({ sale, close, print }: { sale: S; close: () => void; print: ()
 
 function Invoice({ sale, close }: { sale: S; close: () => void }) {
   const balance = +sale.total - +sale.paid;
+  const invoiceRef = useRef<HTMLElement>(null);
   const [business, setBusiness] = useState<Business | null>(null);
   useEffect(() => {
     fetch('/api/business-settings').then(r => r.ok ? r.json() : null).then(setBusiness).catch(() => setBusiness(null));
@@ -448,11 +462,11 @@ function Invoice({ sale, close }: { sale: S; close: () => void }) {
         <div className="invoice-preview-actions no-print">
           <span>Sales Invoice Preview</span>
           <div>
-            <button className="primary" onClick={() => window.print()}><Printer size={16} /> Print invoice</button>
+            <button className="primary" onClick={() => invoiceRef.current && downloadPdfFromElement(invoiceRef.current, `${sale.invoiceNumber}.pdf`)}><Download size={16} /> Download PDF</button>
             <button className="outline" onClick={close}>Close</button>
           </div>
         </div>
-        <section className="print-bill sale-invoice">
+        <section ref={invoiceRef} className="print-bill sale-invoice">
       <div className="invoice-top-accent" />
       <div className="invoice-produce-banner" aria-hidden="true">
         <Image src="/images/invoice-produce-banner.png" alt="" fill sizes="(max-width: 700px) 100vw, 480px" />
