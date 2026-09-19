@@ -129,9 +129,8 @@ export async function PUT(r: Request, { params }: { params: Promise<{ id: string
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const id = (await params).id;
-    const p = await db.select({ id: customerPayments.id }).from(customerPayments).where(eq(customerPayments.saleId, id));
-    if (p.length) return NextResponse.json({ error: 'A sale with recorded customer payments cannot be deleted.' }, { status: 409 });
     await db.transaction(async tx => {
+      await tx.delete(customerPayments).where(eq(customerPayments.saleId, id));
       await tx.delete(saleItems).where(eq(saleItems.saleId, id));
       await tx.delete(customerSales).where(eq(customerSales.id, id));
     });

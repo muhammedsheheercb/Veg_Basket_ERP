@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, FormEvent } from 'react';
 import Image from 'next/image';
-import { Eye, Pencil, Plus, Printer, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Eye, FileText, Leaf, Mail, MapPin, Pencil, Phone, Plus, Printer, Trash2, WalletCards, X } from 'lucide-react';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
 
 type L = { itemId: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
@@ -22,6 +22,7 @@ type S = {
   customerAddress?: string;
   items: (L & { id: string; itemCode: string; itemName: string })[];
 };
+type Business = { address: string; contactNumber: string; email: string };
 
 const today = new Date().toISOString().slice(0, 10);
 const money = (n: number | string) =>
@@ -40,6 +41,8 @@ export default function Sales() {
   const [items, setItems] = useState<any[]>([]);
   const [form, setForm] = useState<S | null | undefined>();
   const [lines, setLines] = useState<L[]>([blank()]);
+  const [discount, setDiscount] = useState('0.00');
+  const [paid, setPaid] = useState('0.00');
   const [detail, setDetail] = useState<S | null>(null);
   const [print, setPrint] = useState<S | null>(null);
   const [remove, setRemove] = useState<R | null>(null);
@@ -76,6 +79,8 @@ export default function Sales() {
           lineTotal: String(x.lineTotal)
         }))
       );
+      setDiscount(String(s.discount || '0.00'));
+      setPaid(String(s.paid || '0.00'));
       setForm(s);
     }
   };
@@ -142,6 +147,8 @@ export default function Sales() {
           className="primary"
           onClick={() => {
             setLines([blank()]);
+            setDiscount('0.00');
+            setPaid('0.00');
             setForm(null);
           }}
         >
@@ -280,11 +287,11 @@ export default function Sales() {
               <div className="sale-form-grid">
                 <label>
                   Discount (AED)
-                  <input name="discount" type="number" min="0" step=".01" defaultValue={form?.discount || '0.00'} />
+                  <input name="discount" type="number" min="0" step=".01" max={subtotal / 100} value={discount} onChange={e => setDiscount(e.target.value)} />
                 </label>
                 <label>
                   Paid amount (AED)
-                  <input name="paid" type="number" min="0" step=".01" defaultValue={form?.paid || '0.00'} />
+                  <input name="paid" type="number" min="0" step=".01" max={Math.max(0, subtotal - cent(discount)) / 100} value={paid} onChange={e => setPaid(e.target.value)} />
                 </label>
                 <label>
                   Payment method
@@ -300,7 +307,7 @@ export default function Sales() {
                 </label>
               </div>
 
-              <Totals subtotal={subtotal} discount={form?.discount || '0'} paid={form?.paid || '0'} />
+              <Totals subtotal={subtotal} discount={discount} paid={paid} />
               {error && <div className="form-error">{error}</div>}
               <button className="primary sales-submit" disabled={busy}>
                 {busy ? 'Saving…' : form ? 'Update sale' : 'Create sale'}
@@ -316,7 +323,7 @@ export default function Sales() {
           <div className="modal-backdrop" />
           <section className="supplier-form card">
             <h2>Delete sale?</h2>
-            <p>Are you sure you want to delete this sale? This action cannot be undone.</p>
+            <p>Are you sure you want to delete this sale? Its related payment records will also be removed. This action cannot be undone.</p>
             {error && <div className="form-error">{error}</div>}
             <div className="confirm-actions">
               <button className="outline" onClick={() => setRemove(null)}>Cancel</button>
@@ -360,21 +367,23 @@ function Table({ sale }: { sale: S }) {
       <table>
         <thead>
           <tr>
-            <th>Item</th>
-            <th>Qty</th>
-            <th>Total</th>
+            <th className="item-index">#</th>
+            <th>Item Description</th>
+            <th className="num">Qty</th>
+            <th className="num">Total (AED)</th>
           </tr>
         </thead>
         <tbody>
-          {sale.items.map(x => (
+          {sale.items.map((x, index) => (
             <tr key={x.id}>
+              <td className="item-index">{index + 1}</td>
               <td>
                 {x.itemCode} · {x.itemName}
               </td>
-              <td>
+              <td className="num">
                 {Number(x.quantity)} {x.unit || ''}
               </td>
-              <td>{money(x.lineTotal)}</td>
+              <td className="num">{Number(x.lineTotal).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             </tr>
           ))}
         </tbody>
@@ -427,62 +436,71 @@ function Details({ sale, close, print }: { sale: S; close: () => void; print: ()
 
 function Invoice({ sale, close }: { sale: S; close: () => void }) {
   const balance = +sale.total - +sale.paid;
+  const [business, setBusiness] = useState<Business | null>(null);
+  useEffect(() => {
+    fetch('/api/business-settings').then(r => r.ok ? r.json() : null).then(setBusiness).catch(() => setBusiness(null));
+  }, []);
+  const paymentStatus = balance <= 0 ? 'Paid' : +sale.paid > 0 ? 'Partial' : 'Unpaid';
   return (
-    <section className="print-bill sale-invoice">
-      <div className="bill-header">
-        <Image src="/images/logo.webp" alt="Veg Basket" width={72} height={80} />
-        <div>
-          <h1>Veg Basket</h1>
-          <p>Sales Invoice</p>
+    <div className="invoice-preview-modal" role="dialog" aria-modal="true" aria-label="Sales invoice preview">
+      <button className="invoice-preview-backdrop no-print" aria-label="Close invoice preview" onClick={close} />
+      <div className="invoice-preview-shell">
+        <div className="invoice-preview-actions no-print">
+          <span>Sales Invoice Preview</span>
+          <div>
+            <button className="primary" onClick={() => window.print()}><Printer size={16} /> Print invoice</button>
+            <button className="outline" onClick={close}>Close</button>
+          </div>
         </div>
-        <div>
-          <h2>Sales Invoice</h2>
-          <p>
-            {sale.invoiceNumber}
-            <br />
-            {sale.saleDate}
-          </p>
-        </div>
+        <section className="print-bill sale-invoice">
+      <div className="invoice-top-accent" />
+      <div className="invoice-produce-banner" aria-hidden="true">
+        <Image src="/images/invoice-produce-banner.png" alt="" fill sizes="(max-width: 700px) 100vw, 480px" />
       </div>
-      <div className="bill-meta">
-        <div>
-          <b>Bill to</b>
-          <strong>{sale.customerName}</strong>
-          <span>{sale.customerMobile}</span>
-          <span>{sale.customerAddress}</span>
+      <header className="invoice-branding">
+        <div className="invoice-company">
+          <Image src="/images/logo.webp" alt="Veg Basket" width={76} height={84} priority />
+          <div>
+            <h1>Veg Basket</h1>
+            <p className="invoice-tagline">Fresh Choices&nbsp; · &nbsp;Healthier Tomorrow</p>
+            <p className="invoice-contact"><MapPin />{business?.address || 'Loading business address…'}</p>
+            <p className="invoice-contact"><Phone />{business?.contactNumber || 'Loading contact number…'}</p>
+            <p className="invoice-contact"><Mail />{business?.email || 'Loading email address…'}</p>
+          </div>
         </div>
-        <div>
-          <b>Payment method</b>
-          <strong>{sale.paymentMethod || '—'}</strong>
-          <b>Payment status</b>
-          <strong>{balance <= 0 ? 'Paid' : +sale.paid ? 'Partial' : 'Unpaid'}</strong>
-        </div>
+        <div className="invoice-title"><Leaf size={26} /><span>Sales Invoice</span><small>Fresh produce · better living</small></div>
+      </header>
+      <div className="invoice-categories">Fresh Vegetables <i /> Fresh Fruits <i /> Quality Produce</div>
+      <div className="invoice-overview">
+        <section className="invoice-panel bill-to">
+          <h2><MapPin /> Bill To</h2>
+          <div><strong>{sale.customerName}</strong><span><Phone /> {sale.customerMobile || 'No contact number'}</span>{sale.customerAddress && <span className="customer-address">{sale.customerAddress}</span>}</div>
+        </section>
+        <section className="invoice-panel invoice-facts">
+          <p><span>Invoice No</span><b>{sale.invoiceNumber}</b></p>
+          <p><span>Invoice Date</span><b>{sale.saleDate}</b></p>
+          <p><span>Payment Status</span><b className={`invoice-status ${paymentStatus.toLowerCase()}`}>{paymentStatus === 'Paid' && <CheckCircle2 />} {paymentStatus}</b></p>
+        </section>
+        <section className="invoice-panel payment-panel">
+          <h2><WalletCards /> Payment Information</h2>
+          <div><p><span>Payment Method</span><b>{sale.paymentMethod || '—'}</b></p><p><span>Payment Status</span><b>{paymentStatus}</b></p></div>
+        </section>
       </div>
       <Table sale={sale} />
-      <div className="bill-summary">
-        <span>
-          Subtotal<strong>{money(sale.subtotal)}</strong>
-        </span>
-        <span>
-          Discount<strong>{money(sale.discount)}</strong>
-        </span>
-        <span>
-          Grand total<strong>{money(sale.total)}</strong>
-        </span>
-        <span>
-          Paid amount<strong>{money(sale.paid)}</strong>
-        </span>
-        <span>
-          Balance amount<strong>{money(balance)}</strong>
-        </span>
+      <div className="invoice-bottom">
+        <div className="invoice-thanks"><Leaf /><p>Thank you<br />for your business!</p><small>Fresh produce<br />better living</small></div>
+        <div className="bill-summary invoice-summary">
+          <span>Subtotal<strong>{money(sale.subtotal)}</strong></span>
+          <span>Discount<strong>{money(sale.discount)}</strong></span>
+          <span>Grand Total<strong>{money(sale.total)}</strong></span>
+          <span>Paid Amount<strong>{money(sale.paid)}</strong></span>
+          <span>Balance Amount<strong>{money(balance)}</strong></span>
+        </div>
       </div>
-      <footer>Thank you for doing business with Veg Basket.</footer>
-      <button className="primary no-print" onClick={() => window.print()}>
-        <Printer size={16} /> Print invoice
-      </button>
-      <button className="outline no-print" onClick={close}>
-        Close
-      </button>
-    </section>
+      <section className="invoice-notes"><h2><FileText /> Notes</h2><p>{sale.notes || 'Thank you for doing business with Veg Basket.'}</p></section>
+      <footer className="invoice-footer"><span><Leaf /> Fresh Produce<br />Better Living</span><span><CheckCircle2 /> Quality Products<br />On Time</span><span><WalletCards /> Healthy Choices<br />Happier Families</span><span><Leaf /> Sustainable<br />For A Greener Tomorrow</span></footer>
+        </section>
+      </div>
+    </div>
   );
 }

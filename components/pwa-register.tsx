@@ -8,6 +8,19 @@ export function PwaRegister() {
       return;
     }
 
+    // Turbopack changes development chunks in place. A service worker that has
+    // cached a previous chunk can then hydrate new server HTML with old client
+    // code, producing a server/client tree mismatch. Keep PWA caching production-only.
+    if (process.env.NODE_ENV !== 'production') {
+      void navigator.serviceWorker.getRegistrations().then(registrations =>
+        Promise.all(registrations.map(registration => registration.unregister()))
+      );
+      void caches.keys().then(keys =>
+        Promise.all(keys.filter(key => key.startsWith('veg-basket-')).map(key => caches.delete(key)))
+      );
+      return;
+    }
+
     const registerServiceWorker = async () => {
       try {
         const registration = await navigator.serviceWorker.register('/sw.js', {

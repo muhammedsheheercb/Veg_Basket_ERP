@@ -23,6 +23,12 @@ export default function SettingsPage() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [businessContact, setBusinessContact] = useState('');
+  const [businessEmail, setBusinessEmail] = useState('');
+  const [savingBusiness, setSavingBusiness] = useState(false);
+  const [businessError, setBusinessError] = useState('');
+  const [businessSuccess, setBusinessSuccess] = useState('');
 
   // Password Form State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -36,7 +42,7 @@ export default function SettingsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/profile');
+      const [res, businessRes] = await Promise.all([fetch('/api/profile'), fetch('/api/business-settings')]);
       if (!res.ok) {
         throw new Error('Failed to load profile details');
       }
@@ -46,10 +52,40 @@ export default function SettingsPage() {
         setEmail(data.user.email || '');
         setRole(data.user.role || 'admin');
       }
+      if (businessRes.ok) {
+        const business = await businessRes.json();
+        setBusinessAddress(business.address || '');
+        setBusinessContact(business.contactNumber || '');
+        setBusinessEmail(business.email || '');
+      }
     } catch (err: any) {
       setError(err.message || 'Error loading profile.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusinessError('');
+    setBusinessSuccess('');
+    setSavingBusiness(true);
+    try {
+      const res = await fetch('/api/business-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: businessAddress, contactNumber: businessContact, email: businessEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save business details.');
+      setBusinessAddress(data.address);
+      setBusinessContact(data.contactNumber);
+      setBusinessEmail(data.email);
+      setBusinessSuccess('Business details saved. New sales invoices will use these details.');
+    } catch (err: any) {
+      setBusinessError(err.message || 'Unable to save business details.');
+    } finally {
+      setSavingBusiness(false);
     }
   };
 
@@ -256,7 +292,27 @@ export default function SettingsPage() {
               </form>
             </section>
 
-            {/* CARD 2: CHANGE PASSWORD */}
+            <section className="data-panel card" style={{ padding: '28px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '22px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
+                <div style={{ width: '54px', height: '54px', borderRadius: '12px', background: '#ecfdf5', color: '#047857', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                  <User size={26} />
+                </div>
+                <div>
+                  <h2 style={{ margin: '0 0 4px', fontSize: '18px', color: '#0f172a' }}>Business Details</h2>
+                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: '12px' }}>Shown automatically in the header of every newly viewed or printed sales invoice.</p>
+                </div>
+              </div>
+              {businessSuccess && <div className="form-error" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', color: '#047857', marginBottom: '16px' }}><CheckCircle2 size={16} /> {businessSuccess}</div>}
+              {businessError && <div className="form-error" style={{ marginBottom: '16px' }}>{businessError}</div>}
+              <form onSubmit={handleUpdateBusiness} className="supplier-form" style={{ padding: 0 }}>
+                <label>Business Address<textarea value={businessAddress} onChange={e => setBusinessAddress(e.target.value)} placeholder="Business address" required /></label>
+                <label style={{ marginTop: '14px' }}>Contact Number<input type="tel" value={businessContact} onChange={e => setBusinessContact(e.target.value)} placeholder="+971 50 123 4567" required /></label>
+                <label style={{ marginTop: '14px' }}>Email Address<input type="email" value={businessEmail} onChange={e => setBusinessEmail(e.target.value)} placeholder="info@vegbasket.ae" required /></label>
+                <div style={{ marginTop: '24px' }}><button type="submit" className="primary" style={{ width: '100%', justifyContent: 'center', background: '#047857' }} disabled={savingBusiness}>{savingBusiness ? <RefreshCw className="button-spinner" size={16} /> : <Save size={16} />}<span>Save Business Details</span></button></div>
+              </form>
+            </section>
+
+            {/* CARD 3: CHANGE PASSWORD */}
             <section className="data-panel card" style={{ padding: '28px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '22px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
                 <div

@@ -170,7 +170,7 @@ export default function Customers() {
           <div className="modal-backdrop" />
           <section className="supplier-form card">
             <h2>Delete customer?</h2>
-            <p>{remove.name} can only be deleted when it has no sales history.</p>
+            <p>Deleting {remove.name} will permanently remove this customer, their sales invoices, invoice items, and payment records.</p>
             <div className="confirm-actions">
               <button className="outline" onClick={() => setRemove(null)}>Cancel</button>
               <button

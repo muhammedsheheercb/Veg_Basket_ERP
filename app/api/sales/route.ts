@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { customerSales, customers, saleItems } from '@/lib/schema';
 
@@ -61,9 +61,17 @@ export async function POST(r: Request) {
     const v = parse(await r.json());
     if (!v) return NextResponse.json({ error: 'Enter a customer, date, valid items and amounts.' }, { status: 400 });
     const sale = await db.transaction(async tx => {
-      const c = await tx.select({ id: customerSales.id }).from(customerSales);
+      // A count is not an invoice sequence: deleted invoices or historic gaps
+      // would cause a duplicate number. The transaction lock also prevents two
+      // simultaneous requests from choosing the same next number.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('customer_sales_invoice_number'))`);
+      const existing = await tx.select({ invoiceNumber: customerSales.invoiceNumber }).from(customerSales);
+      const highestInvoice = existing.reduce((highest, { invoiceNumber }) => {
+        const match = /^SAL-(\d+)$/.exec(invoiceNumber);
+        return match ? Math.max(highest, Number(match[1])) : highest;
+      }, 0);
       const [row] = await tx.insert(customerSales).values({
-        invoiceNumber: `SAL-${String(c.length + 1).padStart(5, '0')}`,
+        invoiceNumber: `SAL-${String(highestInvoice + 1).padStart(5, '0')}`,
         customerId: v.customerId,
         saleDate: v.date,
         subtotal: (v.subtotal / 100).toFixed(2),

@@ -10,7 +10,8 @@
     "setup-admin": "node --env-file=.env scripts/setup-admin.mjs",
     "db:migrate-payment-idempotency": "node --env-file=.env scripts/migrate-payment-idempotency.mjs",
     "db:migrate-customer-sales-workers": "node --env-file=.env scripts/migrate-customer-sales-workers.mjs",
-    "db:migrate-loans": "node --env-file=.env scripts/migrate-loans.mjs"
+    "db:migrate-loans": "node --env-file=.env scripts/migrate-loans.mjs",
+    "db:migrate-business-settings": "node --env-file=.env scripts/migrate-business-settings.mjs"
   },
   "dependencies": {
     "@types/node": "latest",

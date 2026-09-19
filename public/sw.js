@@ -1,4 +1,4 @@
-const CACHE_NAME = 'veg-basket-v1';
+const CACHE_NAME = 'veg-basket-v2';
 const OFFLINE_URL = '/offline';
 
 const PRECACHE_ASSETS = [
