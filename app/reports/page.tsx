@@ -92,18 +92,22 @@ function getPresetDates(preset: DatePreset): { startDate: string; endDate: strin
 }
 
 function exportToCsv(filename: string, headers: string[], rows: (string | number)[][]) {
-  const csvContent =
-    'data:text/csv;charset=utf-8,' +
-    [headers.join(','), ...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join(
-      '\n'
-    );
-  const encodedUri = encodeURI(csvContent);
+  const csvText =
+    [headers.join(','), ...rows.map((r) => r.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
+  const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.setAttribute('href', encodedUri);
-  link.setAttribute('download', filename);
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
+  setTimeout(() => {
+    if (document.body.contains(link)) {
+      document.body.removeChild(link);
+    }
+    URL.revokeObjectURL(url);
+  }, 100);
 }
 
 export default function ReportsPage() {

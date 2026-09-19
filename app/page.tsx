@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   Truck,
   Users,
+  Wallet,
   WalletCards,
   X,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ const money = (value: number) => `AED ${Number(value || 0).toLocaleString('en-AE
 
 const nav = [
   { label: 'Dashboard', icon: Home, href: '/' },
+  { label: 'My Purse', icon: Wallet, href: '/purse' },
   { label: 'Sales', icon: FileText, href: '/sales' },
   { label: 'Purchases', icon: ShoppingCart, href: '/purchases' },
   { label: 'Suppliers', icon: Truck, href: '/suppliers' },
@@ -40,6 +42,7 @@ const nav = [
   { label: 'Workers', icon: HardHat, href: '/workers' },
   { label: 'Expenses', icon: WalletCards, href: '/expenses' },
   { label: 'Loans', icon: Landmark, href: '/loans' },
+  { label: 'Reports', icon: LayoutList, href: '/reports' },
 ];
 
 function Logo() {

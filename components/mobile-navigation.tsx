@@ -15,18 +15,21 @@ import {
   ShoppingCart,
   Truck,
   Users,
+  Wallet,
   WalletCards,
   X,
 } from 'lucide-react';
 
 const primaryItems = [
   ['Home', '/', Home],
+  ['Purse', '/purse', Wallet],
   ['Sales', '/sales', FileText],
   ['Purchases', '/purchases', ShoppingCart],
-  ['Suppliers', '/suppliers', Truck],
 ] as const;
 
 const moreItems = [
+  { label: 'Suppliers', href: '/suppliers', icon: Truck, desc: 'Manage suppliers & vendor balances', bg: '#f0fdf4', color: '#16a34a' },
+  { label: 'My Purse', href: '/purse', icon: Wallet, desc: 'Cash & bank balance tracker', bg: '#e0f2fe', color: '#0284c7' },
   { label: 'Loans', href: '/loans', icon: Landmark, desc: 'Track loan liabilities & EMI payments', bg: '#ecfdf5', color: '#059669' },
   { label: 'Workers', href: '/workers', icon: HardHat, desc: 'Worker wages & expense ledger', bg: '#fef3c7', color: '#d97706' },
   { label: 'Customers', href: '/customers', icon: Users, desc: 'Manage clients & receivable balances', bg: '#eff6ff', color: '#2563eb' },
