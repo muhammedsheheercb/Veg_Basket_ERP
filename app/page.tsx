@@ -69,6 +69,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [userName, setUserName] = useState('');
+  const [userRole, setUserRole] = useState('');
 
   const [dashboard, setDashboard] = useState<{
     metrics: {
@@ -127,6 +129,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     void loadData();
+    fetch('/api/profile')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user?.name) {
+          setUserName(data.user.name);
+          setUserRole(data.user.role || 'admin');
+        }
+      })
+      .catch(() => {});
   }, [loadData]);
 
   const handleNavigate = (href: string, label?: string) => {
@@ -198,7 +209,7 @@ export default function Dashboard() {
           ))}
         </nav>
         <div className="side-bottom">
-          <button type="button" onClick={() => handleNavigate('/sales')}>
+          <button type="button" onClick={() => handleNavigate('/settings')}>
             <Settings size={17} />
             <span>Settings</span>
           </button>
@@ -229,10 +240,19 @@ export default function Dashboard() {
               <Bell size={18} />
               <i />
             </IconButton>
-            <div className="avatar">VB</div>
+            <div className="avatar">
+              {userName
+                ? userName
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()
+                : 'VB'}
+            </div>
             <div className="profile">
-              <b>Veg Basket</b>
-              <small>Administrator</small>
+              <b>{userName || 'Veg Basket'}</b>
+              <small>{userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'Administrator'}</small>
             </div>
           </div>
         </header>
@@ -242,7 +262,7 @@ export default function Dashboard() {
           <div>
             <p className="eyebrow">{dateFormatted}</p>
             <h1>
-              {timeGreeting}, Admin <span>👋</span>
+              {timeGreeting}, {userName || 'Admin'} <span>👋</span>
             </h1>
             <p>Here’s what’s happening with Veg Basket today.</p>
           </div>

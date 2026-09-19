@@ -17,6 +17,7 @@ import {
   Users,
   Wallet,
   WalletCards,
+  Settings,
   X,
 } from 'lucide-react';
 
@@ -36,6 +37,7 @@ const moreItems = [
   { label: 'Expenses', href: '/expenses', icon: WalletCards, desc: 'Operating & daily shop expenses', bg: '#f5f3ff', color: '#7c3aed' },
   { label: 'Items', href: '/items', icon: Boxes, desc: 'Inventory products & item codes', bg: '#ecfeff', color: '#0891b2' },
   { label: 'Reports', href: '/reports', icon: LayoutList, desc: 'Financial summaries & ledger reports', bg: '#f1f5f9', color: '#475569' },
+  { label: 'Settings', href: '/settings', icon: Settings, desc: 'User profile name & password change', bg: '#f1f5f9', color: '#0f172a' },
 ] as const;
 
 export function MobileNavigation() {
