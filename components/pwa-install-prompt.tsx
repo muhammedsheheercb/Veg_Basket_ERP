@@ -59,6 +59,7 @@ export function PwaInstallPrompt() {
 
   return (
     <div
+      className="no-print"
       style={{
         position: 'fixed',
         bottom: '80px',

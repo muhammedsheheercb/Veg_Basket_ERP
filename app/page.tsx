@@ -493,7 +493,7 @@ export default function Dashboard() {
       </section>
 
       {/* Global Bottom Navigation on Mobile */}
-      <nav className="bottom-nav">
+      <nav className="bottom-nav no-print">
         {nav.slice(0, 4).map(({ label, icon: Icon, href }) => (
           <button
             key={label}
