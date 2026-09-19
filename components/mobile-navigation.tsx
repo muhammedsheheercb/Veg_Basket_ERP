@@ -52,7 +52,7 @@ export function MobileNavigation() {
 
   return (
     <>
-      <nav className="global-bottom-nav no-print" aria-label="Primary navigation" suppressHydrationWarning>
+      <nav className="global-bottom-nav" aria-label="Primary navigation">
         {primaryItems.map(([label, href, Icon]) => {
           const active = href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
           return (
@@ -76,7 +76,7 @@ export function MobileNavigation() {
 
       {/* MORE MODULES MODAL / BOTTOM SHEET */}
       {openMore && (
-        <div className="mobile-more-modal no-print">
+        <div className="mobile-more-modal">
           <div className="mobile-more-backdrop" onClick={() => setOpenMore(false)} />
           <section className="mobile-more-sheet card">
             <button className="sheet-close" onClick={() => setOpenMore(false)} aria-label="Close menu">
