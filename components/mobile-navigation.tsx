@@ -32,7 +32,7 @@ const moreItems = [
   { label: 'Customers', href: '/customers', icon: Users, desc: 'Manage clients & receivable balances', bg: '#eff6ff', color: '#2563eb' },
   { label: 'Expenses', href: '/expenses', icon: WalletCards, desc: 'Operating & daily shop expenses', bg: '#f5f3ff', color: '#7c3aed' },
   { label: 'Items', href: '/items', icon: Boxes, desc: 'Inventory products & item codes', bg: '#ecfeff', color: '#0891b2' },
-  { label: 'Reports', href: '#', icon: LayoutList, desc: 'Financial summaries & ledger reports', bg: '#f1f5f9', color: '#475569' },
+  { label: 'Reports', href: '/reports', icon: LayoutList, desc: 'Financial summaries & ledger reports', bg: '#f1f5f9', color: '#475569' },
 ] as const;
 
 export function MobileNavigation() {
@@ -43,7 +43,7 @@ export function MobileNavigation() {
 
   const isMoreActive =
     openMore ||
-    moreItems.some((item) => item.href !== '#' && (path === item.href || path.startsWith(`${item.href}/`)));
+    moreItems.some((item) => path === item.href || path.startsWith(`${item.href}/`));
 
   return (
     <>
@@ -85,7 +85,7 @@ export function MobileNavigation() {
 
             <div className="mobile-more-grid">
               {moreItems.map((item) => {
-                const active = item.href !== '#' && (path === item.href || path.startsWith(`${item.href}/`));
+                const active = path === item.href || path.startsWith(`${item.href}/`);
                 const Icon = item.icon;
                 return (
                   <Link
