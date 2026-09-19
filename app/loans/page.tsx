@@ -494,6 +494,7 @@ export default function LoansPage() {
                 <div className="row-actions">
                   <button
                     type="button"
+                    data-mutation-guard-ignore
                     className="loan-action-btn-main statement"
                     title="View loan statement & ledger"
                     onClick={() => openDetail(x.id)}
@@ -505,6 +506,7 @@ export default function LoansPage() {
                   {!isSettled && (
                     <button
                       type="button"
+                      data-mutation-guard-ignore
                       className="loan-action-btn-main pay"
                       title="Record EMI repayment"
                       onClick={() => {
@@ -520,6 +522,7 @@ export default function LoansPage() {
 
                   <button
                     type="button"
+                    data-mutation-guard-ignore
                     className="loan-action-icon-btn"
                     title="Edit loan details"
                     onClick={() => {
@@ -876,6 +879,7 @@ export default function LoansPage() {
                 {Number(detail.loan.outstanding) > 0.005 && (
                   <button
                     type="button"
+                    data-mutation-guard-ignore
                     className="primary"
                     style={{ height: '38px', padding: '0 16px', fontSize: '12px' }}
                     onClick={() => {
