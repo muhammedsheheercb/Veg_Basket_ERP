@@ -27,7 +27,7 @@ const today = new Date().toISOString().slice(0, 10);
 const money = (n: number | string) =>
   `AED ${Number(n).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const blank = (): L => ({ itemId: '', quantity: '1', unit: 'Kg', unitPrice: '0.00', lineTotal: '0.00' });
+const blank = (): L => ({ itemId: '', quantity: '1', unit: '', unitPrice: '0.00', lineTotal: '0.00' });
 
 const cent = (x: string | number) => {
   const [a, b = ''] = String(x || '0').split('.');
@@ -70,8 +70,8 @@ export default function Sales() {
       setLines(
         s.items.map((x: any) => ({
           itemId: x.itemId,
-          quantity: String(x.quantity),
-          unit: x.unit || 'Kg',
+          quantity: x.unit ? `${Number(x.quantity)} ${x.unit}` : String(x.quantity),
+          unit: x.unit || '',
           unitPrice: String(x.unitPrice),
           lineTotal: String(x.lineTotal)
         }))
@@ -81,58 +81,18 @@ export default function Sales() {
   };
 
   const changeQty = (i: number, q: string) => {
-    setLines(arr =>
-      arr.map((x, n) => {
-        if (n !== i) return x;
-        const qNum = Number(q) || 0;
-        const pNum = Number(x.unitPrice) || 0;
-        const aNum = Number(x.lineTotal) || 0;
-        let newPrice = x.unitPrice;
-        let newTotal = x.lineTotal;
-        if (pNum > 0) {
-          newTotal = (qNum * pNum).toFixed(2);
-        } else if (aNum > 0 && qNum > 0) {
-          newPrice = (aNum / qNum).toFixed(2);
-        } else {
-          newTotal = (qNum * pNum).toFixed(2);
-        }
-        return { ...x, quantity: q, unitPrice: newPrice, lineTotal: newTotal };
-      })
-    );
-  };
-
-  const changePrice = (i: number, p: string) => {
-    setLines(arr =>
-      arr.map((x, n) => {
-        if (n !== i) return x;
-        const qNum = Number(x.quantity) || 0;
-        const pNum = Number(p) || 0;
-        return { ...x, unitPrice: p, lineTotal: (qNum * pNum).toFixed(2) };
-      })
-    );
+    setLines(arr => arr.map((x, n) => (n === i ? { ...x, quantity: q } : x)));
   };
 
   const changeAmount = (i: number, a: string) => {
-    setLines(arr =>
-      arr.map((x, n) => {
-        if (n !== i) return x;
-        const qNum = Number(x.quantity) || 0;
-        const aNum = Number(a) || 0;
-        const newPrice = qNum > 0 ? (aNum / qNum).toFixed(2) : x.unitPrice;
-        return { ...x, lineTotal: a, unitPrice: newPrice };
-      })
-    );
-  };
-
-  const changeUnit = (i: number, u: string) => {
-    setLines(arr => arr.map((x, n) => (n === i ? { ...x, unit: u } : x)));
+    setLines(arr => arr.map((x, n) => (n === i ? { ...x, lineTotal: a } : x)));
   };
 
   const changeItem = (i: number, itemId: string) => {
     setLines(arr => arr.map((x, n) => (n === i ? { ...x, itemId } : x)));
   };
 
-  const subtotal = lines.reduce((n, x) => n + cent(x.lineTotal || (Number(x.quantity) * Number(x.unitPrice)).toFixed(2)), 0);
+  const subtotal = lines.reduce((n, x) => n + cent(x.lineTotal), 0);
 
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -172,18 +132,6 @@ export default function Sales() {
 
   return (
     <main className="management">
-      <datalist id="sale-unit-options">
-        <option value="Kg" />
-        <option value="Box" />
-        <option value="Carton" />
-        <option value="Bag" />
-        <option value="Crate" />
-        <option value="Pcs" />
-        <option value="Packet" />
-        <option value="Gram" />
-        <option value="Ton" />
-      </datalist>
-
       <header className="management-head no-print">
         <div>
           <p className="eyebrow">SALES MANAGEMENT</p>
@@ -298,33 +246,11 @@ export default function Sales() {
                     <label>
                       Qty
                       <input
-                        type="number"
-                        min=".001"
-                        step=".001"
+                        type="text"
                         required
+                        placeholder="e.g. 10 or 10box"
                         value={x.quantity}
                         onChange={e => changeQty(i, e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Unit
-                      <input
-                        list="sale-unit-options"
-                        type="text"
-                        placeholder="Kg / Box"
-                        value={x.unit || ''}
-                        onChange={e => changeUnit(i, e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Price (AED)
-                      <input
-                        type="number"
-                        min="0"
-                        step=".01"
-                        required
-                        value={x.unitPrice}
-                        onChange={e => changePrice(i, e.target.value)}
                       />
                     </label>
                     <label>
@@ -334,6 +260,7 @@ export default function Sales() {
                         min="0"
                         step=".01"
                         required
+                        placeholder="0.00"
                         value={x.lineTotal}
                         onChange={e => changeAmount(i, e.target.value)}
                       />
@@ -435,7 +362,6 @@ function Table({ sale }: { sale: S }) {
           <tr>
             <th>Item</th>
             <th>Qty</th>
-            <th>Unit price</th>
             <th>Total</th>
           </tr>
         </thead>
@@ -448,7 +374,6 @@ function Table({ sale }: { sale: S }) {
               <td>
                 {Number(x.quantity)} {x.unit || ''}
               </td>
-              <td>{money(x.unitPrice)}</td>
               <td>{money(x.lineTotal)}</td>
             </tr>
           ))}
