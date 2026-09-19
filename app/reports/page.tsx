@@ -242,7 +242,7 @@ export default function ReportsPage() {
             <h1>Business Reports</h1>
             <p>Generate, filter, print, and export comprehensive business and financial statements.</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="reports-actions-header">
             <button className="reports-action-btn print" onClick={() => setPrintModalOpen(true)}>
               <Printer size={16} />
               <span>Print Statement</span>

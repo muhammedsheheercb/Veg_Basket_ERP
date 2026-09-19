@@ -225,10 +225,10 @@ export default function MyPursePage() {
 
       <main className="management">
         <header className="management-head">
-          <div>
+          <div className='pb-4'>
             <p className="eyebrow">MONEY FLOW & CASH MANAGEMENT</p>
             <h1>My Purse</h1>
-            <p>Track actual available Cash and Bank balances, money added, spent, and complete transaction history.</p>
+            <p>Track Cash, Bank, income, expenses, and transactions.</p>
           </div>
           <button className="primary" onClick={() => setAddModalOpen(true)}>
             <Plus size={18} />
@@ -461,24 +461,24 @@ export default function MyPursePage() {
               selectedYear ||
               typeFilter !== 'All' ||
               methodFilter !== 'All') && (
-              <button
-                type="button"
-                className="reports-action-btn clear"
-                onClick={() => {
-                  setSearch('');
-                  setPreset('all');
-                  setStartDate('');
-                  setEndDate('');
-                  setSelectedMonth('');
-                  setSelectedYear('');
-                  setTypeFilter('All');
-                  setMethodFilter('All');
-                  setPage(1);
-                }}
-              >
-                Reset Filters
-              </button>
-            )}
+                <button
+                  type="button"
+                  className="reports-action-btn clear"
+                  onClick={() => {
+                    setSearch('');
+                    setPreset('all');
+                    setStartDate('');
+                    setEndDate('');
+                    setSelectedMonth('');
+                    setSelectedYear('');
+                    setTypeFilter('All');
+                    setMethodFilter('All');
+                    setPage(1);
+                  }}
+                >
+                  Reset Filters
+                </button>
+              )}
           </div>
         </section>
 

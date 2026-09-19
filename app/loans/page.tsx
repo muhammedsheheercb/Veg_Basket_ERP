@@ -303,7 +303,7 @@ export default function LoansPage() {
         <div>
           <p className="eyebrow">FINANCIAL LIABILITIES</p>
           <h1>Loan Management</h1>
-          <p>Monitor borrowed capital, monthly EMI schedules, and repayment history.</p>
+          <p>Track loans, EMIs, and repayments.</p>
         </div>
         <button
           className="primary"
@@ -312,7 +312,7 @@ export default function LoansPage() {
             setFormLoan(null);
           }}
         >
-          <Plus size={16} /> Add loan
+          <Plus size={16} /> <span>Add loan</span>
         </button>
       </header>
 
@@ -639,8 +639,8 @@ export default function LoansPage() {
                     ? 'Updating…'
                     : 'Creating…'
                   : formLoan
-                  ? 'Update loan'
-                  : 'Create loan'}
+                    ? 'Update loan'
+                    : 'Create loan'}
               </button>
             </form>
           </section>
