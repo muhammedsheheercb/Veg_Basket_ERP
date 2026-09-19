@@ -203,28 +203,28 @@ export default function ReportsPage() {
 
     if (activeTab === 'sales') {
       headers = ['Sale Date', 'Invoice Number', 'Customer Name', 'Payment Method', 'Total (AED)', 'Paid (AED)', 'Balance (AED)', 'Status'];
-      csvRows = rows.map((r) => [r.saleDate, r.invoiceNumber, r.customerName, r.paymentMethod, r.total, r.paid, r.balance, r.status]);
+      csvRows = rows.map((r) => [r.saleDate, r.invoiceNumber, r.customerName, r.paymentMethod, r.total, r.paid, r.balance, r.status || '']);
     } else if (activeTab === 'purchases') {
       headers = ['Purchase Date', 'Invoice Number', 'Supplier Name', 'Description', 'Payment Method', 'Total (AED)', 'Paid (AED)', 'Balance (AED)', 'Status'];
-      csvRows = rows.map((r) => [r.purchaseDate, r.invoiceNumber, r.supplierName, r.description, r.paymentMethod, r.total, r.paid, r.balance, r.status]);
+      csvRows = rows.map((r) => [r.purchaseDate, r.invoiceNumber, r.supplierName, r.description, r.paymentMethod, r.total, r.paid, r.balance, r.status || '']);
     } else if (activeTab === 'expenses') {
       headers = ['Expense Date', 'Category', 'Notes', 'Amount (AED)'];
       csvRows = rows.map((r) => [r.expenseDate, r.category, r.notes, r.amount]);
     } else if (activeTab === 'customer_outstanding') {
       headers = ['Customer Name', 'Mobile', 'Address', 'Opening Balance (AED)', 'Total Sales (AED)', 'Total Paid (AED)', 'Outstanding Balance (AED)', 'Status'];
-      csvRows = rows.map((r) => [r.customerName, r.mobile, r.address, r.openingBalance, r.totalSales, r.totalPaid, r.balance, r.status]);
+      csvRows = rows.map((r) => [r.customerName, r.mobile, r.address, r.openingBalance, r.totalSales, r.totalPaid, r.balance, r.status || (r.balance > 0 ? 'Outstanding' : 'Clear')]);
     } else if (activeTab === 'supplier_outstanding') {
       headers = ['Supplier Name', 'Mobile', 'Address', 'Opening Balance (AED)', 'Total Purchases (AED)', 'Total Paid (AED)', 'Payable Balance (AED)', 'Status'];
-      csvRows = rows.map((r) => [r.supplierName, r.mobile, r.address, r.openingBalance, r.totalPurchases, r.totalPaid, r.balance, r.status]);
+      csvRows = rows.map((r) => [r.supplierName, r.mobile, r.address, r.openingBalance, r.totalPurchases, r.totalPaid, r.balance, r.status || (r.balance > 0 ? 'Payable' : 'Clear')]);
     } else if (activeTab === 'worker_expenses') {
       headers = ['Date', 'Worker Name', 'Purpose', 'Description', 'Payment Method', 'Amount (AED)'];
       csvRows = rows.map((r) => [r.expenseDate, r.workerName, r.purpose, r.description, r.method, r.amount]);
     } else if (activeTab === 'loan_outstanding') {
       headers = ['Lender', 'Original Amount (AED)', 'Outstanding Balance (AED)', 'Minimum EMI (AED)', 'Next EMI Date', 'Paid in Period (AED)', 'Status'];
-      csvRows = rows.map((r) => [r.lender, r.originalAmount, r.outstanding, r.minimumEmi, r.nextEmiDate, r.totalPaidInPeriod, r.status]);
+      csvRows = rows.map((r) => [r.lender, r.originalAmount, r.outstanding, r.minimumEmi, r.nextEmiDate, r.totalPaidInPeriod, r.status || (r.outstanding > 0 ? 'Active' : 'Closed')]);
     } else if (activeTab === 'payment_methods') {
       headers = ['Date', 'Type', 'Source', 'Reference', 'Party / Category', 'Payment Method', 'Amount (AED)'];
-      csvRows = rows.map((r) => [r.date, r.type, r.source, r.reference, r.party, r.method, r.amount]);
+      csvRows = rows.map((r) => [r.date, r.type || '', r.source, r.reference, r.party, r.method, r.amount]);
     }
 
     exportToCsv(filename, headers, csvRows);
@@ -941,7 +941,7 @@ export default function ReportsPage() {
                             {money(r.balance)}
                           </td>
                           <td>
-                            <span className={`reports-badge ${r.status.toLowerCase()}`}>{r.status}</span>
+                            <span className={`reports-badge ${(r.status || '').toLowerCase()}`}>{r.status || '—'}</span>
                           </td>
                         </tr>
                       );
@@ -962,7 +962,7 @@ export default function ReportsPage() {
                             {money(r.balance)}
                           </td>
                           <td>
-                            <span className={`reports-badge ${r.status.toLowerCase()}`}>{r.status}</span>
+                            <span className={`reports-badge ${(r.status || '').toLowerCase()}`}>{r.status || '—'}</span>
                           </td>
                         </tr>
                       );
@@ -982,6 +982,7 @@ export default function ReportsPage() {
                       );
                     }
                     if (activeTab === 'customer_outstanding') {
+                      const statusVal = r.status || (r.balance > 0 ? 'Outstanding' : 'Clear');
                       return (
                         <tr key={rowKey}>
                           <td>
@@ -996,12 +997,13 @@ export default function ReportsPage() {
                             {money(r.balance)}
                           </td>
                           <td>
-                            <span className={`reports-badge ${r.status.toLowerCase()}`}>{r.status}</span>
+                            <span className={`reports-badge ${statusVal.toLowerCase()}`}>{statusVal}</span>
                           </td>
                         </tr>
                       );
                     }
                     if (activeTab === 'supplier_outstanding') {
+                      const statusVal = r.status || (r.balance > 0 ? 'Payable' : 'Clear');
                       return (
                         <tr key={rowKey}>
                           <td>
@@ -1016,7 +1018,7 @@ export default function ReportsPage() {
                             {money(r.balance)}
                           </td>
                           <td>
-                            <span className={`reports-badge ${r.status.toLowerCase()}`}>{r.status}</span>
+                            <span className={`reports-badge ${statusVal.toLowerCase()}`}>{statusVal}</span>
                           </td>
                         </tr>
                       );
@@ -1038,6 +1040,7 @@ export default function ReportsPage() {
                       );
                     }
                     if (activeTab === 'loan_outstanding') {
+                      const statusVal = r.status || (r.outstanding > 0 ? 'Active' : 'Closed');
                       return (
                         <tr key={rowKey}>
                           <td>
@@ -1053,19 +1056,20 @@ export default function ReportsPage() {
                             {money(r.totalPaidInPeriod)}
                           </td>
                           <td>
-                            <span className={`reports-badge ${r.status === 'Active' ? 'outstanding' : 'clear'}`}>
-                              {r.status}
+                            <span className={`reports-badge ${statusVal === 'Active' ? 'outstanding' : 'clear'}`}>
+                              {statusVal}
                             </span>
                           </td>
                         </tr>
                       );
                     }
                     if (activeTab === 'payment_methods') {
+                      const typeVal = r.type || '—';
                       return (
                         <tr key={rowKey}>
                           <td>{shortDate(r.date)}</td>
                           <td>
-                            <span className={`reports-badge ${r.type.toLowerCase()}`}>{r.type}</span>
+                            <span className={`reports-badge ${typeVal.toLowerCase()}`}>{typeVal}</span>
                           </td>
                           <td>{r.source}</td>
                           <td>
