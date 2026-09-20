@@ -70,7 +70,9 @@ export async function GET(req: Request) {
           date: customerSales.saleDate,
           ref: customerSales.invoiceNumber,
           party: customers.name,
-          amount: customerSales.paid,
+          // `customerSales.paid` includes both the initial sale payment and later customer-payment records.
+          // Show only the initial portion here; later payments are listed from customerPayments below.
+          amount: sql<string>`greatest(${customerSales.paid} - coalesce((select sum(${customerPayments.amount}) from ${customerPayments} where ${customerPayments.saleId} = ${customerSales.id}), 0), 0)`,
           method: customerSales.paymentMethod,
           createdAt: customerSales.createdAt,
         })
@@ -134,6 +136,7 @@ export async function GET(req: Request) {
           notes: expenses.notes,
         })
         .from(expenses)
+        .where(sql`not exists (select 1 from ${workerExpenses} where ${workerExpenses.expenseId} = ${expenses.id})`)
         .orderBy(asc(expenses.expenseDate)),
 
       db

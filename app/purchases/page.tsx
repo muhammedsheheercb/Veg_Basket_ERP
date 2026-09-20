@@ -57,6 +57,7 @@ export default function Purchases() {
       method: form?.id ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        idempotencyKey: crypto.randomUUID(),
         supplierId: d.get('supplierId'),
         date: d.get('date'),
         description: d.get('description'),
