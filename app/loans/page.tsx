@@ -18,7 +18,7 @@ import {
   WalletCards,
   X,
 } from 'lucide-react';
-import { downloadPdfFromElement } from '@/components/pdf-download';
+import { downloadPdf, downloadPdfFromElement } from '@/components/pdf-download';
 
 type LoanRow = {
   id: string;
@@ -153,6 +153,17 @@ export default function LoansPage() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const downloadLoanStatement = async (data: LoanDetail) => {
+    const paid = data.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    await downloadPdf({
+      kind: 'Loan Statement', title: `Loan statement · ${data.loan.lender}`, party: data.loan.lender,
+      summary: [['Original Loan', money(data.loan.originalAmount || data.loan.outstanding)], ['Total Repaid', money(paid)], ['Outstanding Balance', money(data.loan.outstanding)]],
+      headers: ['Date', 'Method', 'Notes', 'Amount Paid', 'Balance After'],
+      rows: data.payments.length ? data.payments.map(payment => [payment.paymentDate, payment.method || 'Cash', payment.notes || '—', money(payment.amount), money(payment.balanceAfter ?? 0)]) : [['—', '—', 'No repayments recorded.', '—', money(data.loan.outstanding)]],
+      notes: data.loan.description || undefined,
+    }, `${data.loan.lender}-loan-statement.pdf`);
   };
 
   // Create or Update Loan
@@ -617,6 +628,8 @@ export default function LoansPage() {
                   <input
                     name="nextEmiDate"
                     type="date"
+                    min={today}
+                    data-allow-future
                     defaultValue={formLoan?.nextEmiDate || ''}
                   />
                 </label>
@@ -767,7 +780,7 @@ export default function LoansPage() {
               <button
                 type="button"
                 className="loan-download-btn"
-                onClick={() => setPrintLoan(detail)}
+                onClick={() => { void downloadLoanStatement(detail); }}
               >
                 <Download size={14} /> Download PDF
               </button>
@@ -861,33 +874,6 @@ export default function LoansPage() {
                   <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
                     Remaining Balance: <b style={{ color: '#dc2626', fontSize: '13px' }}>{money(detail.loan.outstanding)}</b>
                   </span>
-                )}
-              </div>
-
-              <div className="loan-footer-actions">
-                <button
-                  type="button"
-                  className="loan-btn-secondary"
-                  onClick={() => setDetail(null)}
-                >
-                  Close
-                </button>
-                {Number(detail.loan.outstanding) > 0.005 && (
-                  <button
-                    type="button"
-                    data-mutation-guard-ignore
-                    className="primary"
-                    style={{ height: '38px', padding: '0 16px', fontSize: '12px' }}
-                    onClick={() => {
-                      const row = rows.find((r) => r.id === detail.loan.id);
-                      if (row) {
-                        setPayLoan(row);
-                        setPayAmount(row.emi && Number(row.emi) > 0 ? String(row.emi) : '');
-                      }
-                    }}
-                  >
-                    <WalletCards size={15} /> Record Payment
-                  </button>
                 )}
               </div>
             </div>

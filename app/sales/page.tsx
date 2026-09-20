@@ -172,7 +172,7 @@ export default function Sales() {
 
       <section className="card data-panel no-print">
         <ListFilters controls={controls} dateFilter placeholder="Search invoice, customer, or amount…" />
-        <div className="supplier-row labels purchase-row">
+        <div className="supplier-row labels sale-row">
           <span>Invoice</span>
           <span>Customer</span>
           <span>Date</span>
@@ -181,7 +181,7 @@ export default function Sales() {
           <span>Actions</span>
         </div>
         {controls.pageRows.map(r => (
-          <div className="supplier-row purchase-row" key={r.id}>
+          <div className="supplier-row sale-row" key={r.id}>
             <b>{r.invoice}</b>
             <span>{r.customer}</span>
             <span>{r.date}</span>

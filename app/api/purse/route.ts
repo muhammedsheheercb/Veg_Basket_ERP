@@ -99,7 +99,9 @@ export async function GET(req: Request) {
           date: purchases.purchaseDate,
           ref: purchases.invoiceNumber,
           party: suppliers.name,
-          amount: purchases.paid,
+          // `purchases.paid` includes both the initial payment and later supplier-payment records.
+          // Show only the initial portion here; later payments are listed from supplierPayments below.
+          amount: sql<string>`greatest(${purchases.paid} - coalesce((select sum(${supplierPayments.amount}) from ${supplierPayments} where ${supplierPayments.purchaseId} = ${purchases.id}), 0), 0)`,
           method: purchases.paymentMethod,
           desc: purchases.description,
           createdAt: purchases.createdAt,

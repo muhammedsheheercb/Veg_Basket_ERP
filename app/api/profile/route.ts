@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { users } from '@/lib/schema';
-import { SESSION_COOKIE, signSession, verifySession } from '@/lib/auth';
+import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, signSession, verifySession } from '@/lib/auth';
 
 async function getActiveUser() {
   const cookieStore = await cookies();
@@ -118,7 +118,7 @@ export async function PUT(request: Request) {
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
           path: '/',
-          maxAge: 60 * 60 * 8,
+          maxAge: SESSION_MAX_AGE_SECONDS,
         });
       } catch (e) {
         console.warn('Could not refresh session cookie:', e);

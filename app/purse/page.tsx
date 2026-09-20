@@ -220,13 +220,12 @@ export default function MyPursePage() {
 
   return (
     <div className="app-shell">
-
       <main className="management">
         <header className="management-head">
-          <div className='pb-4'>
+          <div className="pb-4">
             <p className="eyebrow">MONEY FLOW & CASH MANAGEMENT</p>
             <h1>My Purse</h1>
-            <p>Track Cash, Bank, income, expenses, and transactions.</p>
+            <p>Track your money.</p>
           </div>
           <button className="primary" onClick={() => setAddModalOpen(true)}>
             <Plus size={18} />
@@ -237,24 +236,38 @@ export default function MyPursePage() {
         {/* SUMMARY CARDS */}
         <section className="purse-summary-grid">
           {/* Total Balance */}
-          <div className="purse-card" style={{ borderLeft: '4px solid #168d65' }}>
+          <div
+            className="purse-card"
+            style={{ borderLeft: "4px solid #168d65" }}
+          >
             <div className="purse-card-top">
               <small>Total Balance</small>
-              <div className="purse-card-icon" style={{ background: '#e3f7ee', color: '#168d65' }}>
+              <div
+                className="purse-card-icon"
+                style={{ background: "#e3f7ee", color: "#168d65" }}
+              >
                 <Wallet size={20} />
               </div>
             </div>
             <div className="purse-card-info">
-              <b style={{ fontSize: '22px', color: '#168d65' }}>{money(summary.totalBalance)}</b>
+              <b style={{ fontSize: "22px", color: "#168d65" }}>
+                {money(summary.totalBalance)}
+              </b>
               <span>Current Cash + Bank</span>
             </div>
           </div>
 
           {/* Cash Balance */}
-          <div className="purse-card" style={{ borderLeft: '4px solid #059669' }}>
+          <div
+            className="purse-card"
+            style={{ borderLeft: "4px solid #059669" }}
+          >
             <div className="purse-card-top">
               <small>Cash Balance</small>
-              <div className="purse-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+              <div
+                className="purse-card-icon"
+                style={{ background: "#ecfdf5", color: "#059669" }}
+              >
                 <Wallet size={20} />
               </div>
             </div>
@@ -265,10 +278,16 @@ export default function MyPursePage() {
           </div>
 
           {/* Bank Balance */}
-          <div className="purse-card" style={{ borderLeft: '4px solid #2563eb' }}>
+          <div
+            className="purse-card"
+            style={{ borderLeft: "4px solid #2563eb" }}
+          >
             <div className="purse-card-top">
               <small>Bank Balance</small>
-              <div className="purse-card-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>
+              <div
+                className="purse-card-icon"
+                style={{ background: "#eff6ff", color: "#2563eb" }}
+              >
                 <Wallet size={20} />
               </div>
             </div>
@@ -279,29 +298,41 @@ export default function MyPursePage() {
           </div>
 
           {/* Today's Money Added */}
-          <div className="purse-card" style={{ borderLeft: '4px solid #15803d' }}>
+          <div
+            className="purse-card"
+            style={{ borderLeft: "4px solid #15803d" }}
+          >
             <div className="purse-card-top">
               <small>Today&apos;s Money Added</small>
-              <div className="purse-card-icon" style={{ background: '#dcfce7', color: '#15803d' }}>
+              <div
+                className="purse-card-icon"
+                style={{ background: "#dcfce7", color: "#15803d" }}
+              >
                 <ArrowDownLeft size={20} />
               </div>
             </div>
             <div className="purse-card-info">
-              <b style={{ color: '#15803d' }}>+ {money(summary.todayAdded)}</b>
+              <b style={{ color: "#15803d" }}>+ {money(summary.todayAdded)}</b>
               <span>Total added today</span>
             </div>
           </div>
 
           {/* Today's Money Spent */}
-          <div className="purse-card" style={{ borderLeft: '4px solid #b91c1c' }}>
+          <div
+            className="purse-card"
+            style={{ borderLeft: "4px solid #b91c1c" }}
+          >
             <div className="purse-card-top">
               <small>Today&apos;s Money Spent</small>
-              <div className="purse-card-icon" style={{ background: '#fee2e2', color: '#b91c1c' }}>
+              <div
+                className="purse-card-icon"
+                style={{ background: "#fee2e2", color: "#b91c1c" }}
+              >
                 <ArrowUpRight size={20} />
               </div>
             </div>
             <div className="purse-card-info">
-              <b style={{ color: '#b91c1c' }}>- {money(summary.todaySpent)}</b>
+              <b style={{ color: "#b91c1c" }}>- {money(summary.todaySpent)}</b>
               <span>Total spent today</span>
             </div>
           </div>
@@ -312,22 +343,22 @@ export default function MyPursePage() {
           {/* Group 1: Date Filter */}
           <div>
             <div className="purse-filter-group-title">
-              <Calendar size={15} style={{ color: '#168d65' }} />
+              <Calendar size={15} style={{ color: "#168d65" }} />
               <span>Filter by Date / Range</span>
             </div>
             <div className="purse-filter-row">
               {(
                 [
-                  ['all', 'All Dates'],
-                  ['today', 'Today'],
-                  ['yesterday', 'Yesterday'],
-                  ['custom', 'Custom Range'],
+                  ["all", "All Dates"],
+                  ["today", "Today"],
+                  ["yesterday", "Yesterday"],
+                  ["custom", "Custom Range"],
                 ] as const
               ).map(([pId, label]) => (
                 <button
                   key={pId}
                   type="button"
-                  className={`reports-preset-btn ${preset === pId ? 'active' : ''}`}
+                  className={`reports-preset-btn ${preset === pId ? "active" : ""}`}
                   onClick={() => handlePresetChange(pId)}
                 >
                   {label}
@@ -340,9 +371,9 @@ export default function MyPursePage() {
                 onChange={(from, to) => {
                   setStartDate(from);
                   setEndDate(to);
-                  setPreset('custom');
-                  setSelectedMonth('');
-                  setSelectedYear('');
+                  setPreset("custom");
+                  setSelectedMonth("");
+                  setSelectedYear("");
                   setPage(1);
                 }}
               />
@@ -352,15 +383,24 @@ export default function MyPursePage() {
           {/* Group 2: Month / Year Filter */}
           <div>
             <div className="purse-filter-group-title">
-              <Calendar size={15} style={{ color: '#2563eb' }} />
+              <Calendar size={15} style={{ color: "#2563eb" }} />
               <span>Filter by Month / Year</span>
             </div>
             <div className="purse-filter-row">
               <MonthPicker
-                value={selectedMonth ? `${selectedYear || new Date().getFullYear()}-${selectedMonth.padStart(2, '0')}` : ''}
+                value={
+                  selectedMonth
+                    ? `${selectedYear || new Date().getFullYear()}-${selectedMonth.padStart(2, "0")}`
+                    : ""
+                }
                 onChange={(value) => {
-                  if (!value) { setSelectedMonth(''); setSelectedYear(''); setPage(1); return; }
-                  const [year, month] = value.split('-');
+                  if (!value) {
+                    setSelectedMonth("");
+                    setSelectedYear("");
+                    setPage(1);
+                    return;
+                  }
+                  const [year, month] = value.split("-");
                   setSelectedYear(year);
                   handleMonthChange(String(Number(month)));
                 }}
@@ -370,8 +410,11 @@ export default function MyPursePage() {
 
           {/* Group 3: Search, Type & Method */}
           <div className="purse-filter-row">
-            <div className="reports-search-box" style={{ flex: 1, minWidth: '220px' }}>
-              <Search size={16} style={{ color: '#94a3b8' }} />
+            <div
+              className="reports-search-box"
+              style={{ flex: 1, minWidth: "220px" }}
+            >
+              <Search size={16} style={{ color: "#94a3b8" }} />
               <input
                 type="search"
                 value={search}
@@ -415,66 +458,102 @@ export default function MyPursePage() {
             </select>
 
             {(search ||
-              preset !== 'all' ||
+              preset !== "all" ||
               startDate ||
               endDate ||
               selectedMonth ||
               selectedYear ||
-              typeFilter !== 'All' ||
-              methodFilter !== 'All') && (
-                <button
-                  type="button"
-                  className="reports-action-btn clear"
-                  onClick={() => {
-                    setSearch('');
-                    setPreset('all');
-                    setStartDate('');
-                    setEndDate('');
-                    setSelectedMonth('');
-                    setSelectedYear('');
-                    setTypeFilter('All');
-                    setMethodFilter('All');
-                    setPage(1);
-                  }}
-                >
-                  Reset Filters
-                </button>
-              )}
+              typeFilter !== "All" ||
+              methodFilter !== "All") && (
+              <button
+                type="button"
+                className="reports-action-btn clear"
+                onClick={() => {
+                  setSearch("");
+                  setPreset("all");
+                  setStartDate("");
+                  setEndDate("");
+                  setSelectedMonth("");
+                  setSelectedYear("");
+                  setTypeFilter("All");
+                  setMethodFilter("All");
+                  setPage(1);
+                }}
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         </section>
 
         {/* PURSE TRANSACTION HISTORY TABLE */}
         <section className="reports-table-wrap">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: '14px', color: '#0f172a' }}>
+          <div
+            style={{
+              padding: "14px 18px",
+              borderBottom: "1px solid #e2e8f0",
+              background: "#f8fafc",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>
               Purse Transaction History ({pagination.totalCount} Records)
             </h3>
             {pagination.totalCount > 0 && (
-              <small style={{ color: 'var(--muted)', fontSize: '11px' }}>
-                Period In: <b style={{ color: '#15803d' }}>+ {money(summary.periodMoneyIn)}</b> | Period Out:{' '}
-                <b style={{ color: '#b91c1c' }}>- {money(summary.periodMoneyOut)}</b>
+              <small style={{ color: "var(--muted)", fontSize: "11px" }}>
+                Period In:{" "}
+                <b style={{ color: "#15803d" }}>
+                  + {money(summary.periodMoneyIn)}
+                </b>{" "}
+                | Period Out:{" "}
+                <b style={{ color: "#b91c1c" }}>
+                  - {money(summary.periodMoneyOut)}
+                </b>
               </small>
             )}
           </div>
 
           {loading ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
-              <RefreshCw className="button-spinner" size={24} style={{ marginBottom: '8px' }} />
+            <div
+              style={{
+                padding: "40px",
+                textAlign: "center",
+                color: "var(--muted)",
+              }}
+            >
+              <RefreshCw
+                className="button-spinner"
+                size={24}
+                style={{ marginBottom: "8px" }}
+              />
               <p>Loading purse transaction history...</p>
             </div>
           ) : error ? (
-            <div style={{ padding: '30px', textAlign: 'center', color: '#b91c1c' }}>
+            <div
+              style={{ padding: "30px", textAlign: "center", color: "#b91c1c" }}
+            >
               <p>{error}</p>
-              <button className="reports-action-btn clear" onClick={() => fetchPurseData()}>
+              <button
+                className="reports-action-btn clear"
+                onClick={() => fetchPurseData()}
+              >
                 Retry
               </button>
             </div>
           ) : !rows.length ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
+            <div
+              style={{
+                padding: "40px",
+                textAlign: "center",
+                color: "var(--muted)",
+              }}
+            >
               <p>No purse transactions found matching your filters.</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: "auto" }}>
               <table className="reports-table">
                 <thead>
                   <tr>
@@ -486,15 +565,19 @@ export default function MyPursePage() {
                     <th className="num">Money In (+)</th>
                     <th className="num">Money Out (-)</th>
                     <th className="num">Purse Balance</th>
-                    <th style={{ textAlign: 'center' }}>Action</th>
+                    <th style={{ textAlign: "center" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((t: any) => (
                     <tr key={t.id}>
-                      <td style={{ whiteSpace: 'nowrap' }}>{shortDate(t.date)}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        {shortDate(t.date)}
+                      </td>
                       <td>
-                        <span className={`reports-badge ${t.direction === 'In' ? 'inflow' : 'outflow'}`}>
+                        <span
+                          className={`reports-badge ${t.direction === "In" ? "inflow" : "outflow"}`}
+                        >
                           {t.type}
                         </span>
                       </td>
@@ -503,46 +586,61 @@ export default function MyPursePage() {
                       </td>
                       <td>{t.party}</td>
                       <td>
-                        <span style={{ fontSize: '11px', fontWeight: 600, color: t.isCash ? '#059669' : '#2563eb' }}>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: t.isCash ? "#059669" : "#2563eb",
+                          }}
+                        >
                           {t.method}
                         </span>
                       </td>
                       <td className="num">
                         {t.moneyIn > 0 ? (
-                          <span className="purse-money-in">+ {money(t.moneyIn)}</span>
+                          <span className="purse-money-in">
+                            + {money(t.moneyIn)}
+                          </span>
                         ) : (
-                          <span style={{ color: '#cbd5e1' }}>—</span>
+                          <span style={{ color: "#cbd5e1" }}>—</span>
                         )}
                       </td>
                       <td className="num">
                         {t.moneyOut > 0 ? (
-                          <span className="purse-money-out">- {money(t.moneyOut)}</span>
+                          <span className="purse-money-out">
+                            - {money(t.moneyOut)}
+                          </span>
                         ) : (
-                          <span style={{ color: '#cbd5e1' }}>—</span>
+                          <span style={{ color: "#cbd5e1" }}>—</span>
                         )}
                       </td>
-                      <td className="num" style={{ fontWeight: 700, color: '#0f172a' }}>
+                      <td
+                        className="num"
+                        style={{ fontWeight: 700, color: "#0f172a" }}
+                      >
                         {money(t.totalBalance)}
                       </td>
-                      <td style={{ textAlign: 'center' }}>
+                      <td style={{ textAlign: "center" }}>
                         {t.isManual ? (
                           <button
                             type="button"
                             title="Delete manual money addition"
                             style={{
                               border: 0,
-                              background: '#ffedef',
-                              color: '#d64c55',
-                              borderRadius: '6px',
-                              padding: '5px',
-                              cursor: 'pointer',
+                              background: "#ffedef",
+                              color: "#d64c55",
+                              borderRadius: "6px",
+                              padding: "5px",
+                              cursor: "pointer",
                             }}
                             onClick={() => setDeleteId(t.id)}
                           >
                             <Trash2 size={15} />
                           </button>
                         ) : (
-                          <span style={{ fontSize: '10px', color: '#94a3b8' }}>System</span>
+                          <span style={{ fontSize: "10px", color: "#94a3b8" }}>
+                            System
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -554,12 +652,18 @@ export default function MyPursePage() {
 
           {/* PAGINATION FOOTER */}
           {pagination.totalCount > 10 && (
-            <div className="list-footer-pagination" style={{ padding: '12px 16px' }}>
+            <div
+              className="list-footer-pagination"
+              style={{ padding: "12px 16px" }}
+            >
               <div className="list-pagination">
                 <span className="list-count">
                   Showing {(pagination.page - 1) * pagination.pageSize + 1}–
-                  {Math.min(pagination.page * pagination.pageSize, pagination.totalCount)} of {pagination.totalCount}{' '}
-                  transactions
+                  {Math.min(
+                    pagination.page * pagination.pageSize,
+                    pagination.totalCount,
+                  )}{" "}
+                  of {pagination.totalCount} transactions
                 </span>
                 <div className="pagination-actions">
                   <button
@@ -584,7 +688,9 @@ export default function MyPursePage() {
                   <button
                     type="button"
                     title="Next page"
-                    onClick={() => setPage((p) => Math.min(pagination.pageCount, p + 1))}
+                    onClick={() =>
+                      setPage((p) => Math.min(pagination.pageCount, p + 1))
+                    }
                     disabled={pagination.page >= pagination.pageCount}
                   >
                     <ChevronRight size={16} />
@@ -604,21 +710,49 @@ export default function MyPursePage() {
         </section>
       </main>
 
-
       {/* ADD MONEY MODAL */}
       {addModalOpen && (
         <div className="modal">
-          <div className="modal-backdrop" onClick={() => setAddModalOpen(false)} />
-          <section className="supplier-form" style={{ width: 'min(450px, 100%)', background: '#fff', borderRadius: '12px' }}>
-            <button className="sheet-close" onClick={() => setAddModalOpen(false)} aria-label="Close modal">
+          <div
+            className="modal-backdrop"
+            onClick={() => setAddModalOpen(false)}
+          />
+          <section
+            className="supplier-form"
+            style={{
+              width: "min(450px, 100%)",
+              background: "#fff",
+              borderRadius: "12px",
+            }}
+          >
+            <button
+              className="sheet-close"
+              onClick={() => setAddModalOpen(false)}
+              aria-label="Close modal"
+            >
               <X size={18} />
             </button>
-            <h2 style={{ fontSize: '18px', margin: '0 0 4px', color: '#0f172a' }}>Add Money to Purse</h2>
-            <p style={{ margin: '0 0 16px', color: 'var(--muted)', fontSize: '12px' }}>
-              Add cash or bank funds directly to your purse. Balances will update automatically.
+            <h2
+              style={{ fontSize: "18px", margin: "0 0 4px", color: "#0f172a" }}
+            >
+              Add Money to Purse
+            </h2>
+            <p
+              style={{
+                margin: "0 0 16px",
+                color: "var(--muted)",
+                fontSize: "12px",
+              }}
+            >
+              Add cash or bank funds directly to your purse. Balances will
+              update automatically.
             </p>
 
-            {addError && <div className="form-error" style={{ marginBottom: '14px' }}>{addError}</div>}
+            {addError && (
+              <div className="form-error" style={{ marginBottom: "14px" }}>
+                {addError}
+              </div>
+            )}
 
             <form onSubmit={handleAddMoneySubmit}>
               <label>
@@ -636,7 +770,12 @@ export default function MyPursePage() {
 
               <label>
                 Add To / Payment Method
-                <select value={addMethod} onChange={(e) => setAddMethod(e.target.value as 'Cash' | 'Bank')}>
+                <select
+                  value={addMethod}
+                  onChange={(e) =>
+                    setAddMethod(e.target.value as "Cash" | "Bank")
+                  }
+                >
                   <option value="Cash">Cash Balance</option>
                   <option value="Bank">Bank Balance</option>
                 </select>
@@ -661,7 +800,7 @@ export default function MyPursePage() {
                 />
               </label>
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+              <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                 <button
                   type="button"
                   className="outline"
@@ -671,8 +810,17 @@ export default function MyPursePage() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="primary" style={{ flex: 1, justifyContent: 'center' }} disabled={addLoading}>
-                  {addLoading ? <RefreshCw className="button-spinner" size={16} /> : <Plus size={16} />}
+                <button
+                  type="submit"
+                  className="primary"
+                  style={{ flex: 1, justifyContent: "center" }}
+                  disabled={addLoading}
+                >
+                  {addLoading ? (
+                    <RefreshCw className="button-spinner" size={16} />
+                  ) : (
+                    <Plus size={16} />
+                  )}
                   <span>Add Money</span>
                 </button>
               </div>
@@ -688,10 +836,16 @@ export default function MyPursePage() {
           <section className="supplier-form card">
             <h2>Delete Money Record?</h2>
             <p>
-              Are you sure you want to delete this manual money addition? This action will reverse the money entry from your purse balance.
+              Are you sure you want to delete this manual money addition? This
+              action will reverse the money entry from your purse balance.
             </p>
             <div className="confirm-actions">
-              <button type="button" className="outline" onClick={() => setDeleteId(null)} disabled={deleteLoading}>
+              <button
+                type="button"
+                className="outline"
+                onClick={() => setDeleteId(null)}
+                disabled={deleteLoading}
+              >
                 Cancel
               </button>
               <button
@@ -700,7 +854,11 @@ export default function MyPursePage() {
                 onClick={handleDeleteAddition}
                 disabled={deleteLoading}
               >
-                {deleteLoading ? <RefreshCw className="button-spinner" size={16} /> : 'Delete Entry'}
+                {deleteLoading ? (
+                  <RefreshCw className="button-spinner" size={16} />
+                ) : (
+                  "Delete Entry"
+                )}
               </button>
             </div>
           </section>

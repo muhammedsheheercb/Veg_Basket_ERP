@@ -8,7 +8,7 @@ const updateSchema = z.object({
   name: z.string().trim().min(1, 'Lender or loan name is required.'),
   date: z.string().min(10, 'Valid loan date is required.'),
   emi: z.coerce.number().min(0, 'EMI cannot be negative.').default(0),
-  nextEmiDate: z.string().optional().nullable(),
+  nextEmiDate: z.string().date().optional().nullable().refine(value => !value || value >= new Date().toISOString().slice(0, 10), 'Next EMI date cannot be in the past.'),
   description: z.string().trim().max(1000).optional().nullable(),
   originalAmount: z.coerce.number().positive().optional(),
 });

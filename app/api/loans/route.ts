@@ -9,7 +9,7 @@ const schema = z.object({
   amount: z.coerce.number().positive('Loan amount must be greater than 0.'),
   date: z.string().min(10, 'Valid loan date is required.'),
   emi: z.coerce.number().min(0, 'EMI cannot be negative.').default(0),
-  nextEmiDate: z.string().optional().nullable(),
+  nextEmiDate: z.string().date().optional().nullable().refine(value => !value || value >= new Date().toISOString().slice(0, 10), 'Next EMI date cannot be in the past.'),
   description: z.string().trim().max(1000).optional().nullable(),
 });
 

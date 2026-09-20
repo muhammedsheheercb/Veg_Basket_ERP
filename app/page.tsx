@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
 
@@ -236,10 +237,11 @@ export default function Dashboard() {
             />
           </form>
           <div className="top-actions">
-            <IconButton onClick={() => handleNavigate('/sales')}>
+            <IconButton onClick={() => setNotificationsOpen((open) => !open)}>
               <Bell size={18} />
               <i />
             </IconButton>
+            {notificationsOpen && <div className="notification-panel" role="status"><b>Notifications</b>{metrics.receivables > 0 || metrics.payables > 0 || metrics.loanBalance > 0 ? <div>{metrics.receivables > 0 && <button onClick={() => handleNavigate('/customers')}>Customer receivables: {money(metrics.receivables)}</button>}{metrics.payables > 0 && <button onClick={() => handleNavigate('/suppliers')}>Supplier payables: {money(metrics.payables)}</button>}{metrics.loanBalance > 0 && <button onClick={() => handleNavigate('/loans')}>Loan balance due: {money(metrics.loanBalance)}</button>}</div> : <p>No new notifications.</p>}</div>}
             <div className="avatar">
               {userName
                 ? userName
@@ -585,4 +587,3 @@ function Quick({ icon, label, onClick }: { icon: React.ReactNode; label: string;
     </button>
   );
 }
-

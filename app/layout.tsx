@@ -9,6 +9,7 @@ import { NetworkStatus } from '@/components/network-status';
 import { NativeFilterPickerUpgrade } from '@/components/native-filter-picker-upgrade';
 import { PwaRegister } from '@/components/pwa-register';
 import { PwaInstallPrompt } from '@/components/pwa-install-prompt';
+import { SessionExpiryRedirect } from '@/components/session-expiry-redirect';
 
 export const metadata: Metadata = {
   title: 'Veg Basket',
@@ -35,6 +36,8 @@ export const viewport: Viewport = {
   themeColor: '#168d65',
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -50,6 +53,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <NativeFilterPickerUpgrade />
         <PwaRegister />
         <PwaInstallPrompt />
+        <SessionExpiryRedirect />
         {children}
       </body>
     </html>

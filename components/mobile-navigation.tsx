@@ -18,8 +18,9 @@ import {
   Wallet,
   WalletCards,
   Settings,
-  X,
+  X, LogOut,
 } from 'lucide-react';
+import { LogoutConfirmation } from './logout-confirmation';
 
 const primaryItems = [
   ['Home', '/', Home],
@@ -43,6 +44,7 @@ const moreItems = [
 export function MobileNavigation() {
   const path = usePathname();
   const [openMore, setOpenMore] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   if (path === '/login') return null;
 
@@ -88,6 +90,8 @@ export function MobileNavigation() {
             </div>
             <p className="mobile-more-subtitle">Quickly access other Veg Basket ERP modules</p>
 
+            <button className="outline" style={{ width: '100%', justifyContent: 'center' }} onClick={() => { setOpenMore(false); setLogoutOpen(true); }}><LogOut size={16}/> Logout</button>
+
             <div className="mobile-more-grid">
               {moreItems.map((item) => {
                 const active = path === item.href || path.startsWith(`${item.href}/`);
@@ -114,6 +118,7 @@ export function MobileNavigation() {
           </section>
         </div>
       )}
+      <LogoutConfirmation open={logoutOpen} onCancel={() => setLogoutOpen(false)} />
     </>
   );
 }
