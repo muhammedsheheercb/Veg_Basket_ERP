@@ -6,7 +6,34 @@ import { Boxes, FileText, HardHat, Home, Landmark, LayoutList, LogOut, Menu, Set
 import { useState } from 'react';
 import { LogoutConfirmation } from './logout-confirmation';
 
-const links = [['Dashboard', '/', Home], ['My Purse', '/purse', Wallet], ['Sales', '/sales', FileText], ['Purchases', '/purchases', ShoppingCart], ['Suppliers', '/suppliers', Truck], ['Customers', '/customers', Users], ['Items', '/items', Boxes], ['Workers', '/workers', HardHat], ['Expenses', '/expenses', WalletCards], ['Loans', '/loans', Landmark], ['Reports', '/reports', LayoutList]] as const;
+const navGroups = [
+  {
+    title: 'OVERVIEW',
+    items: [
+      ['Dashboard', '/', Home],
+      ['My Purse', '/purse', Wallet],
+    ],
+  },
+  {
+    title: 'OPERATIONS',
+    items: [
+      ['Sales', '/sales', FileText],
+      ['Purchases', '/purchases', ShoppingCart],
+      ['Suppliers', '/suppliers', Truck],
+      ['Customers', '/customers', Users],
+      ['Items', '/items', Boxes],
+    ],
+  },
+  {
+    title: 'MANAGEMENT',
+    items: [
+      ['Workers', '/workers', HardHat],
+      ['Expenses', '/expenses', WalletCards],
+      ['Loans', '/loans', Landmark],
+      ['Reports', '/reports', LayoutList],
+    ],
+  },
+] as const;
 
 export function AppSidebar({ active }: { active: string }) {
   const [open, setOpen] = useState(false);
@@ -21,23 +48,45 @@ export function AppSidebar({ active }: { active: string }) {
 
       <aside className={`app-sidebar ${open ? 'is-open' : ''}`}>
         <div className="app-brand">
-          <Image src="/images/logo.webp" alt="Veg Basket" width={38} height={42} priority />
-          <button onClick={() => setOpen(false)} aria-label="Close menu">
+          <div className="app-brand-logo-wrap">
+            <Image src="/images/logo.webp" alt="Veg Basket Logo" width={30} height={34} priority className="app-brand-logo" />
+          </div>
+          <div className="app-brand-info">
+            <div className="app-brand-title">
+              Veg <span>Basket</span>
+            </div>
+            <span className="app-brand-badge">ERP</span>
+          </div>
+          <button className="app-brand-close" onClick={() => setOpen(false)} aria-label="Close menu">
             <X size={19} />
           </button>
         </div>
 
-        <nav>
-          {links.map(([label, href, Icon]) => (
-            <Link key={label} href={href} className={active === label ? 'active' : ''} onClick={() => setOpen(false)}>
-              <Icon size={17} />
-              <span>{label}</span>
-            </Link>
+        <nav className="app-sidebar-nav">
+          {navGroups.map((group) => (
+            <div key={group.title} className="nav-group">
+              <div className="nav-group-title">{group.title}</div>
+              {group.items.map(([label, href, Icon]) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className={`nav-link ${active === label ? 'active' : ''}`}
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon size={17} className="nav-icon" />
+                  <span>{label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
 
         <div className="app-sidebar-footer">
-          <Link className={`settings-link ${active === 'Settings' ? 'active' : ''}`} href="/settings" onClick={() => setOpen(false)}>
+          <Link
+            className={`settings-link ${active === 'Settings' ? 'active' : ''}`}
+            href="/settings"
+            onClick={() => setOpen(false)}
+          >
             <Settings size={17} />
             <span>Settings</span>
           </Link>
@@ -49,7 +98,7 @@ export function AppSidebar({ active }: { active: string }) {
               setLogoutOpen(true);
             }}
           >
-            <LogOut size={18} />
+            <LogOut size={17} />
             <span>Logout</span>
           </button>
         </div>
@@ -59,4 +108,5 @@ export function AppSidebar({ active }: { active: string }) {
     </>
   );
 }
+
 
