@@ -148,7 +148,7 @@ export default function ReportsPage() {
           setWorkersList(data.map((w) => ({ id: w.id, name: w.name })));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handlePresetChange = (newPreset: DatePreset) => {
@@ -244,11 +244,11 @@ export default function ReportsPage() {
   return (
     <div className="app-shell">
       <main className="management">
-        <header className="management-head">
-          <div>
+        <header className="management-head reports-management-head">
+          <div className="reports-head-title">
             <p className="eyebrow">FINANCIAL ANALYTICS & LEDGERS</p>
             <h1>Business Reports</h1>
-            <p>Generate, filter, download, and export comprehensive business and financial statements.</p>
+            <p>Manage business reports.</p>
           </div>
           <div className="reports-actions-header">
             <button className="reports-action-btn download" onClick={() => setPrintModalOpen(true)}>
@@ -287,30 +287,32 @@ export default function ReportsPage() {
         <section className="data-panel reports-toolbar" style={{ marginBottom: '20px' }}>
           {/* Preset buttons */}
           <div className="reports-preset-bar">
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', marginRight: '4px' }}>
+            <span className="reports-preset-label">
               Date Filter:
             </span>
-            {(
-              [
-                ['today', 'Today'],
-                ['yesterday', 'Yesterday'],
-                ['this_week', 'This Week'],
-                ['this_month', 'This Month'],
-                ['last_month', 'Last Month'],
-                ['this_year', 'This Year'],
-                ['all_time', 'All Time'],
-                ['custom', 'Custom Range'],
-              ] as const
-            ).map(([pId, label]) => (
-              <button
-                key={pId}
-                type="button"
-                className={`reports-preset-btn ${preset === pId ? 'active' : ''}`}
-                onClick={() => handlePresetChange(pId)}
-              >
-                {label}
-              </button>
-            ))}
+            <div className="reports-preset-scroll">
+              {(
+                [
+                  ['today', 'Today'],
+                  ['yesterday', 'Yesterday'],
+                  ['this_week', 'This Week'],
+                  ['this_month', 'This Month'],
+                  ['last_month', 'Last Month'],
+                  ['this_year', 'This Year'],
+                  ['all_time', 'All Time'],
+                  ['custom', 'Custom Range'],
+                ] as const
+              ).map(([pId, label]) => (
+                <button
+                  key={pId}
+                  type="button"
+                  className={`reports-preset-btn ${preset === pId ? 'active' : ''}`}
+                  onClick={() => handlePresetChange(pId)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Filter Controls Row */}
@@ -1128,18 +1130,18 @@ export default function ReportsPage() {
         </section>
       </main>
 
-      {/* DOWNLOADABLE FINANCIAL STATEMENT MODAL */}
+      {/* DOWNLOADABLE FINANCIAL STATEMENT MODAL / PREVIEW */}
       {printModalOpen && (
         <div className="modal document-modal">
           <div className="modal-backdrop" onClick={() => setPrintModalOpen(false)} />
           <div className="document-modal-card">
-            <button className="sheet-close" onClick={() => setPrintModalOpen(false)} aria-label="Close document">
-              <X size={18} />
-            </button>
             <div className="document-actions">
-              <button type="button" className="primary" onClick={handleDownloadPdf}>
+              <button type="button" className="pdf-preview-download-btn" onClick={handleDownloadPdf}>
                 <Download size={16} />
                 <span>Download PDF</span>
+              </button>
+              <button type="button" className="pdf-preview-close-btn" onClick={() => setPrintModalOpen(false)} aria-label="Close preview">
+                <X size={18} />
               </button>
             </div>
 
