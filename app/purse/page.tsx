@@ -553,101 +553,168 @@ export default function MyPursePage() {
               <p>No purse transactions found matching your filters.</p>
             </div>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table className="reports-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Transaction Type</th>
-                    <th>Description / Details</th>
-                    <th>Party / Source</th>
-                    <th>Payment Method</th>
-                    <th className="num">Money In (+)</th>
-                    <th className="num">Money Out (-)</th>
-                    <th className="num">Purse Balance</th>
-                    <th style={{ textAlign: "center" }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((t: any) => (
-                    <tr key={t.id}>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        {shortDate(t.date)}
-                      </td>
-                      <td>
-                        <span
-                          className={`reports-badge ${t.direction === "In" ? "inflow" : "outflow"}`}
+            <>
+              {/* DESKTOP TABLE VIEW */}
+              <div className="desktop-only" style={{ overflowX: "auto" }}>
+                <table className="reports-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Transaction Type</th>
+                      <th>Description / Details</th>
+                      <th>Party / Source</th>
+                      <th>Payment Method</th>
+                      <th className="num">Money In (+)</th>
+                      <th className="num">Money Out (-)</th>
+                      <th className="num">Purse Balance</th>
+                      <th style={{ textAlign: "center" }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((t: any) => (
+                      <tr key={t.id}>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          {shortDate(t.date)}
+                        </td>
+                        <td>
+                          <span
+                            className={`reports-badge ${t.direction === "In" ? "inflow" : "outflow"}`}
+                          >
+                            {t.type}
+                          </span>
+                        </td>
+                        <td>
+                          <b>{t.description}</b>
+                        </td>
+                        <td>{t.party}</td>
+                        <td>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              color: t.isCash ? "#059669" : "#2563eb",
+                            }}
+                          >
+                            {t.method}
+                          </span>
+                        </td>
+                        <td className="num">
+                          {t.moneyIn > 0 ? (
+                            <span className="purse-money-in">
+                              + {money(t.moneyIn)}
+                            </span>
+                          ) : (
+                            <span style={{ color: "#cbd5e1" }}>—</span>
+                          )}
+                        </td>
+                        <td className="num">
+                          {t.moneyOut > 0 ? (
+                            <span className="purse-money-out">
+                              - {money(t.moneyOut)}
+                            </span>
+                          ) : (
+                            <span style={{ color: "#cbd5e1" }}>—</span>
+                          )}
+                        </td>
+                        <td
+                          className="num"
+                          style={{ fontWeight: 700, color: "#0f172a" }}
                         >
+                          {money(t.totalBalance)}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {t.isManual ? (
+                            <button
+                              type="button"
+                              title="Delete manual money addition"
+                              style={{
+                                border: 0,
+                                background: "#ffedef",
+                                color: "#d64c55",
+                                borderRadius: "6px",
+                                padding: "5px",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => setDeleteId(t.id)}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: "10px", color: "#94a3b8" }}>
+                              System
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE CARD LIST VIEW */}
+              <div className="mobile-only" style={{ padding: "10px" }}>
+                {rows.map((t: any) => (
+                  <div key={t.id} className="erp-mobile-card">
+                    <div className="erp-mobile-card-header">
+                      <div>
+                        <span className={`reports-badge ${t.direction === "In" ? "inflow" : "outflow"}`}>
                           {t.type}
                         </span>
-                      </td>
-                      <td>
-                        <b>{t.description}</b>
-                      </td>
-                      <td>{t.party}</td>
-                      <td>
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            color: t.isCash ? "#059669" : "#2563eb",
-                          }}
-                        >
-                          {t.method}
-                        </span>
-                      </td>
-                      <td className="num">
+                        <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                          {shortDate(t.date)} · <span style={{ fontWeight: 600, color: t.isCash ? "#059669" : "#2563eb" }}>{t.method}</span>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
                         {t.moneyIn > 0 ? (
-                          <span className="purse-money-in">
-                            + {money(t.moneyIn)}
-                          </span>
-                        ) : (
-                          <span style={{ color: "#cbd5e1" }}>—</span>
-                        )}
-                      </td>
-                      <td className="num">
-                        {t.moneyOut > 0 ? (
-                          <span className="purse-money-out">
-                            - {money(t.moneyOut)}
-                          </span>
-                        ) : (
-                          <span style={{ color: "#cbd5e1" }}>—</span>
-                        )}
-                      </td>
-                      <td
-                        className="num"
-                        style={{ fontWeight: 700, color: "#0f172a" }}
-                      >
-                        {money(t.totalBalance)}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        {t.isManual ? (
-                          <button
-                            type="button"
-                            title="Delete manual money addition"
-                            style={{
-                              border: 0,
-                              background: "#ffedef",
-                              color: "#d64c55",
-                              borderRadius: "6px",
-                              padding: "5px",
-                              cursor: "pointer",
-                            }}
-                            onClick={() => setDeleteId(t.id)}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: "10px", color: "#94a3b8" }}>
-                            System
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          <b className="purse-money-in" style={{ fontSize: "14px" }}>+ {money(t.moneyIn)}</b>
+                        ) : t.moneyOut > 0 ? (
+                          <b className="purse-money-out" style={{ fontSize: "14px" }}>- {money(t.moneyOut)}</b>
+                        ) : null}
+                        <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
+                          Balance: <b>{money(t.totalBalance)}</b>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="erp-mobile-card-body full-width">
+                      <div className="erp-mobile-field">
+                        <label>Description / Details</label>
+                        <b style={{ fontSize: "12.5px" }}>{t.description}</b>
+                      </div>
+                      {t.party && (
+                        <div className="erp-mobile-field">
+                          <label>Party / Source</label>
+                          <span>{t.party}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {t.isManual && (
+                      <div className="erp-mobile-card-actions">
+                        <button
+                          type="button"
+                          className="danger"
+                          title="Delete manual money addition"
+                          style={{
+                            border: 0,
+                            background: "#ffedef",
+                            color: "#d64c55",
+                            borderRadius: "8px",
+                            height: "36px",
+                            padding: "0 12px",
+                            fontWeight: 600,
+                            fontSize: "12px"
+                          }}
+                          onClick={() => setDeleteId(t.id)}
+                        >
+                          <Trash2 size={15} /> Delete Entry
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {/* PAGINATION FOOTER */}

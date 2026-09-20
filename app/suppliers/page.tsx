@@ -120,78 +120,159 @@ export default function Suppliers() {
           placeholder="Search supplier, mobile, or balance…"
         />
         <div className="supplier-table">
-          <div className="supplier-row labels">
-            <span>Supplier</span>
-            <span>Mobile</span>
-            <span>Purchases</span>
-            <span>Paid</span>
-            <span>Payable</span>
-            <span>Actions</span>
-          </div>
-          {controls.pageRows.map((s) => (
-            <div className="supplier-row" key={s.id}>
-              <b>{s.name}</b>
-              <span>{s.mobile}</span>
-              <span>{money(s.totalPurchases)}</span>
-              <span>{money(s.totalPaid)}</span>
-              <b className={s.payable ? "payable" : ""}>{money(s.payable)}</b>
-              <span className="row-actions">
-                <button
-                  title="View transaction history"
-                  disabled={loadingId === s.id + "-view"}
-                  onClick={async () => {
-                    setLoadingId(s.id + "-view");
-                    const data = await get(s.id);
-                    setView(data);
-                    setLoadingId(null);
-                  }}
-                >
-                  {loadingId === s.id + "-view" ? (
-                    <span className="button-spinner" />
-                  ) : (
-                    <Eye size={16} />
-                  )}
-                </button>
-                <button title="Edit" onClick={() => setForm(s)}>
-                  <Pencil size={16} />
-                </button>
-                <button
-                  className="danger"
-                  title="Delete"
-                  onClick={() => setRemove(s)}
-                >
-                  <Trash2 size={16} />
-                </button>
-                <button
-                  title="Purse / ledger"
-                  disabled={loadingId === s.id + "-ledger"}
-                  onClick={async () => {
-                    setLoadingId(s.id + "-ledger");
-                    setSelected("");
-                    const data = await get(s.id);
-                    setLedger(data);
-                    setLoadingId(null);
-                  }}
-                >
-                  {loadingId === s.id + "-ledger" ? (
-                    <span className="button-spinner" />
-                  ) : (
-                    <WalletCards size={16} />
-                  )}
-                </button>
-                <button
-                  className="statement-download"
-                  title="Download supplier statement PDF"
-                  onClick={async () => {
-                    const data = await get(s.id);
-                    if (data) await downloadStatement(data);
-                  }}
-                >
-                  <Download size={16} />
-                </button>
-              </span>
+          {/* DESKTOP VIEW */}
+          <div className="desktop-only">
+            <div className="supplier-row labels">
+              <span>Supplier</span>
+              <span>Mobile</span>
+              <span>Purchases</span>
+              <span>Paid</span>
+              <span>Payable</span>
+              <span>Actions</span>
             </div>
-          ))}
+            {controls.pageRows.map((s) => (
+              <div className="supplier-row" key={s.id}>
+                <b>{s.name}</b>
+                <span>{s.mobile}</span>
+                <span>{money(s.totalPurchases)}</span>
+                <span>{money(s.totalPaid)}</span>
+                <b className={s.payable ? "payable" : ""}>{money(s.payable)}</b>
+                <span className="row-actions">
+                  <button
+                    title="View transaction history"
+                    disabled={loadingId === s.id + "-view"}
+                    onClick={async () => {
+                      setLoadingId(s.id + "-view");
+                      const data = await get(s.id);
+                      setView(data);
+                      setLoadingId(null);
+                    }}
+                  >
+                    {loadingId === s.id + "-view" ? (
+                      <span className="button-spinner" />
+                    ) : (
+                      <Eye size={16} />
+                    )}
+                  </button>
+                  <button title="Edit" onClick={() => setForm(s)}>
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    className="danger"
+                    title="Delete"
+                    onClick={() => setRemove(s)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <button
+                    title="Purse / ledger"
+                    disabled={loadingId === s.id + "-ledger"}
+                    onClick={async () => {
+                      setLoadingId(s.id + "-ledger");
+                      setSelected("");
+                      const data = await get(s.id);
+                      setLedger(data);
+                      setLoadingId(null);
+                    }}
+                  >
+                    {loadingId === s.id + "-ledger" ? (
+                      <span className="button-spinner" />
+                    ) : (
+                      <WalletCards size={16} />
+                    )}
+                  </button>
+                  <button
+                    className="statement-download"
+                    title="Download supplier statement PDF"
+                    onClick={async () => {
+                      const data = await get(s.id);
+                      if (data) await downloadStatement(data);
+                    }}
+                  >
+                    <Download size={16} />
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* MOBILE CARDS VIEW */}
+          <div className="mobile-only" style={{ marginTop: "12px" }}>
+            {controls.pageRows.map((s) => (
+              <div key={s.id} className="erp-mobile-card">
+                <div className="erp-mobile-card-header">
+                  <div>
+                    <div className="erp-mobile-card-title">{s.name}</div>
+                    <div className="erp-mobile-card-subtitle">{s.mobile || 'No mobile listed'}</div>
+                  </div>
+                  <b className={s.payable ? "payable" : ""} style={{ fontSize: "14px" }}>
+                    {money(s.payable)}
+                  </b>
+                </div>
+
+                <div className="erp-mobile-card-body">
+                  <div className="erp-mobile-field">
+                    <label>Total Purchases</label>
+                    <span>{money(s.totalPurchases)}</span>
+                  </div>
+                  <div className="erp-mobile-field">
+                    <label>Total Paid</label>
+                    <span>{money(s.totalPaid)}</span>
+                  </div>
+                </div>
+
+                <div className="erp-mobile-card-actions">
+                  <button
+                    title="View History"
+                    disabled={loadingId === s.id + "-view"}
+                    onClick={async () => {
+                      setLoadingId(s.id + "-view");
+                      const data = await get(s.id);
+                      setView(data);
+                      setLoadingId(null);
+                    }}
+                  >
+                    {loadingId === s.id + "-view" ? <span className="button-spinner" /> : <Eye size={16} />}
+                    <span>History</span>
+                  </button>
+
+                  <button
+                    title="Record Payment"
+                    disabled={loadingId === s.id + "-ledger"}
+                    onClick={async () => {
+                      setLoadingId(s.id + "-ledger");
+                      setSelected("");
+                      const data = await get(s.id);
+                      setLedger(data);
+                      setLoadingId(null);
+                    }}
+                  >
+                    {loadingId === s.id + "-ledger" ? <span className="button-spinner" /> : <WalletCards size={16} />}
+                    <span>Pay</span>
+                  </button>
+
+                  <button title="Edit" onClick={() => setForm(s)}>
+                    <Pencil size={16} />
+                  </button>
+
+                  <button className="danger" title="Delete" onClick={() => setRemove(s)}>
+                    <Trash2 size={16} />
+                  </button>
+
+                  <button
+                    title="Download Statement"
+                    onClick={async () => {
+                      const data = await get(s.id);
+                      if (data) await downloadStatement(data);
+                    }}
+                  >
+                    <Download size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {!controls.filtered.length && (
             <p className="empty">No suppliers match these filters.</p>
           )}

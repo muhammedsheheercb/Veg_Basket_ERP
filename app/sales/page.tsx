@@ -172,37 +172,92 @@ export default function Sales() {
 
       <section className="card data-panel no-print">
         <ListFilters controls={controls} dateFilter placeholder="Search invoice, customer, or amount…" />
-        <div className="supplier-row labels sale-row">
-          <span>Invoice</span>
-          <span>Customer</span>
-          <span>Date</span>
-          <span>Total</span>
-          <span>Balance</span>
-          <span>Actions</span>
-        </div>
-        {controls.pageRows.map(r => (
-          <div className="supplier-row sale-row" key={r.id}>
-            <b>{r.invoice}</b>
-            <span>{r.customer}</span>
-            <span>{r.date}</span>
-            <span>{money(r.total)}</span>
-            <b className="payable">{money(+r.total - +r.paid)}</b>
-            <span className="row-actions">
-              <button title="View" onClick={async () => setDetail(await get(r.id))}>
-                <Eye size={16} />
-              </button>
-              <button title="Edit" onClick={() => edit(r)}>
-                <Pencil size={16} />
-              </button>
-              <button className="danger" title="Delete" onClick={() => { setError(''); setRemove(r); }}>
-                <Trash2 size={16} />
-              </button>
-              <button title="Download PDF" onClick={async () => { const sale = await get(r.id); if (sale) await downloadSale(sale); }}>
-                <Download size={16} />
-              </button>
-            </span>
+        
+        {/* DESKTOP TABLE VIEW */}
+        <div className="desktop-only">
+          <div className="supplier-row labels sale-row">
+            <span>Invoice</span>
+            <span>Customer</span>
+            <span>Date</span>
+            <span>Total</span>
+            <span>Balance</span>
+            <span>Actions</span>
           </div>
-        ))}
+          {controls.pageRows.map(r => (
+            <div className="supplier-row sale-row" key={r.id}>
+              <b>{r.invoice}</b>
+              <span>{r.customer}</span>
+              <span>{r.date}</span>
+              <span>{money(r.total)}</span>
+              <b className="payable">{money(+r.total - +r.paid)}</b>
+              <span className="row-actions">
+                <button title="View" onClick={async () => setDetail(await get(r.id))}>
+                  <Eye size={16} />
+                </button>
+                <button title="Edit" onClick={() => edit(r)}>
+                  <Pencil size={16} />
+                </button>
+                <button className="danger" title="Delete" onClick={() => { setError(''); setRemove(r); }}>
+                  <Trash2 size={16} />
+                </button>
+                <button title="Download PDF" onClick={async () => { const sale = await get(r.id); if (sale) await downloadSale(sale); }}>
+                  <Download size={16} />
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* MOBILE CARDS VIEW */}
+        <div className="mobile-only" style={{ marginTop: "12px" }}>
+          {controls.pageRows.map(r => {
+            const balance = +r.total - +r.paid;
+            const statusLabel = balance <= 0 ? 'Paid' : +r.paid > 0 ? 'Partial' : 'Unpaid';
+            const statusClass = balance <= 0 ? 'paid' : +r.paid > 0 ? 'partial' : 'pending';
+            return (
+              <div key={r.id} className="erp-mobile-card">
+                <div className="erp-mobile-card-header">
+                  <div>
+                    <div className="erp-mobile-card-title">{r.invoice}</div>
+                    <div className="erp-mobile-card-subtitle">{r.date}</div>
+                  </div>
+                  <span className={`status ${statusClass}`}>{statusLabel}</span>
+                </div>
+
+                <div className="erp-mobile-card-body">
+                  <div className="erp-mobile-field" style={{ gridColumn: "1 / -1" }}>
+                    <label>Customer</label>
+                    <b style={{ fontSize: "13px" }}>{r.customer}</b>
+                  </div>
+                  <div className="erp-mobile-field">
+                    <label>Total Sales Amount</label>
+                    <span>{money(r.total)}</span>
+                  </div>
+                  <div className="erp-mobile-field">
+                    <label>Balance Payable</label>
+                    <b className="payable">{money(balance)}</b>
+                  </div>
+                </div>
+
+                <div className="erp-mobile-card-actions">
+                  <button title="View Details" onClick={async () => setDetail(await get(r.id))}>
+                    <Eye size={16} /> <span>View</span>
+                  </button>
+                  <button title="Edit Invoice" onClick={() => edit(r)}>
+                    <Pencil size={16} /> <span>Edit</span>
+                  </button>
+                  <button className="danger" title="Delete Sale" onClick={() => { setError(''); setRemove(r); }}>
+                    <Trash2 size={16} />
+                  </button>
+                  <button title="Download Invoice PDF" onClick={async () => { const sale = await get(r.id); if (sale) await downloadSale(sale); }}>
+                    <Download size={16} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {!controls.filtered.length && <p className="empty">No sales invoices match these filters.</p>}
         <div className="list-footer-pagination">
           <ListPagination controls={controls} />

@@ -231,78 +231,157 @@ export default function Customers() {
           controls={controls}
           placeholder="Search customer, mobile, or balance…"
         />
-        <div className="supplier-row labels">
-          <span>Customer</span>
-          <span>Mobile</span>
-          <span>Sales</span>
-          <span>Paid</span>
-          <span>Outstanding</span>
-          <span>Actions</span>
-        </div>
-        {controls.pageRows.map((c) => (
-          <div className="supplier-row" key={c.id}>
-            <b>{c.name}</b>
-            <span>{c.mobile}</span>
-            <span>{money(c.totalSales)}</span>
-            <span>{money(c.totalPaid)}</span>
-            <b className={c.outstanding ? "payable" : ""}>
-              {money(c.outstanding)}
-            </b>
-            <span className="row-actions">
-              <button
-                title="View statement"
-                disabled={loadingId === c.id + "-statement"}
-                onClick={async () => {
-                  setLoadingId(c.id + "-statement");
-                  const d = await get(c.id);
-                  if (d) setLedger({ ...d, statement: true });
-                  setLoadingId(null);
-                }}
-              >
-                {loadingId === c.id + "-statement" ? (
-                  <span className="button-spinner" />
-                ) : (
-                  <Eye size={16} />
-                )}
-              </button>
-              <button title="Edit" onClick={() => setForm(c)}>
-                <Pencil size={16} />
-              </button>
-              <button
-                className="danger"
-                title="Delete"
-                onClick={() => setRemove(c)}
-              >
-                <Trash2 size={16} />
-              </button>
-              <button
-                title="Customer ledger / collect payment"
-                disabled={loadingId === c.id + "-ledger"}
-                onClick={async () => {
-                  setLoadingId(c.id + "-ledger");
-                  await open(c.id);
-                  setLoadingId(null);
-                }}
-              >
-                {loadingId === c.id + "-ledger" ? (
-                  <span className="button-spinner" />
-                ) : (
-                  <WalletCards size={16} />
-                )}
-              </button>
-              <button
-                className="statement-download"
-                title="Download customer statement PDF"
-                onClick={async () => {
-                  const data = await get(c.id);
-                  if (data) await downloadStatement(data);
-                }}
-              >
-                <Download size={16} />
-              </button>
-            </span>
+        {/* DESKTOP VIEW */}
+        <div className="desktop-only">
+          <div className="supplier-row labels">
+            <span>Customer</span>
+            <span>Mobile</span>
+            <span>Sales</span>
+            <span>Paid</span>
+            <span>Outstanding</span>
+            <span>Actions</span>
           </div>
-        ))}
+          {controls.pageRows.map((c) => (
+            <div className="supplier-row" key={c.id}>
+              <b>{c.name}</b>
+              <span>{c.mobile}</span>
+              <span>{money(c.totalSales)}</span>
+              <span>{money(c.totalPaid)}</span>
+              <b className={c.outstanding ? "payable" : ""}>
+                {money(c.outstanding)}
+              </b>
+              <span className="row-actions">
+                <button
+                  title="View statement"
+                  disabled={loadingId === c.id + "-statement"}
+                  onClick={async () => {
+                    setLoadingId(c.id + "-statement");
+                    const d = await get(c.id);
+                    if (d) setLedger({ ...d, statement: true });
+                    setLoadingId(null);
+                  }}
+                >
+                  {loadingId === c.id + "-statement" ? (
+                    <span className="button-spinner" />
+                  ) : (
+                    <Eye size={16} />
+                  )}
+                </button>
+                <button title="Edit" onClick={() => setForm(c)}>
+                  <Pencil size={16} />
+                </button>
+                <button
+                  className="danger"
+                  title="Delete"
+                  onClick={() => setRemove(c)}
+                >
+                  <Trash2 size={16} />
+                </button>
+                <button
+                  title="Customer ledger / collect payment"
+                  disabled={loadingId === c.id + "-ledger"}
+                  onClick={async () => {
+                    setLoadingId(c.id + "-ledger");
+                    await open(c.id);
+                    setLoadingId(null);
+                  }}
+                >
+                  {loadingId === c.id + "-ledger" ? (
+                    <span className="button-spinner" />
+                  ) : (
+                    <WalletCards size={16} />
+                  )}
+                </button>
+                <button
+                  className="statement-download"
+                  title="Download customer statement PDF"
+                  onClick={async () => {
+                    const data = await get(c.id);
+                    if (data) await downloadStatement(data);
+                  }}
+                >
+                  <Download size={16} />
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* MOBILE CARDS VIEW */}
+        <div className="mobile-only" style={{ marginTop: "12px" }}>
+          {controls.pageRows.map((c) => (
+            <div key={c.id} className="erp-mobile-card">
+              <div className="erp-mobile-card-header">
+                <div>
+                  <div className="erp-mobile-card-title">{c.name}</div>
+                  <div className="erp-mobile-card-subtitle">{c.mobile || 'No mobile listed'}</div>
+                </div>
+                <b className={c.outstanding ? "payable" : ""} style={{ fontSize: "14px" }}>
+                  {money(c.outstanding)}
+                </b>
+              </div>
+
+              <div className="erp-mobile-card-body">
+                <div className="erp-mobile-field">
+                  <label>Total Sales</label>
+                  <span>{money(c.totalSales)}</span>
+                </div>
+                <div className="erp-mobile-field">
+                  <label>Total Received</label>
+                  <span>{money(c.totalPaid)}</span>
+                </div>
+              </div>
+
+              <div className="erp-mobile-card-actions">
+                <button
+                  title="View Statement"
+                  disabled={loadingId === c.id + "-statement"}
+                  onClick={async () => {
+                    setLoadingId(c.id + "-statement");
+                    const d = await get(c.id);
+                    if (d) setLedger({ ...d, statement: true });
+                    setLoadingId(null);
+                  }}
+                >
+                  {loadingId === c.id + "-statement" ? <span className="button-spinner" /> : <Eye size={16} />}
+                  <span>Statement</span>
+                </button>
+
+                <button
+                  title="Receive Payment"
+                  disabled={loadingId === c.id + "-ledger"}
+                  onClick={async () => {
+                    setLoadingId(c.id + "-ledger");
+                    await open(c.id);
+                    setLoadingId(null);
+                  }}
+                >
+                  {loadingId === c.id + "-ledger" ? <span className="button-spinner" /> : <WalletCards size={16} />}
+                  <span>Collect</span>
+                </button>
+
+                <button title="Edit" onClick={() => setForm(c)}>
+                  <Pencil size={16} />
+                </button>
+
+                <button className="danger" title="Delete" onClick={() => setRemove(c)}>
+                  <Trash2 size={16} />
+                </button>
+
+                <button
+                  title="Download Statement"
+                  onClick={async () => {
+                    const data = await get(c.id);
+                    if (data) await downloadStatement(data);
+                  }}
+                >
+                  <Download size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {!controls.filtered.length && (
           <p className="empty">No customers match these filters.</p>
         )}

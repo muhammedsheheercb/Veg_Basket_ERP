@@ -1,4 +1,318 @@
 // @ts-nocheck
-'use client';import Link from'next/link';import{useEffect,useState}from'react';import{useParams}from'next/navigation';import{ChevronLeft,Pencil,Plus,Trash2,X}from'lucide-react';import{ServerListPagination}from'@/components/list-controls';import{DateRangePicker,MonthPicker}from'@/components/filter-date-pickers';const money=x=>`AED ${Number(x).toLocaleString('en-AE',{minimumFractionDigits:2})}`,today=new Date().toISOString().slice(0,10);
-export default function WorkerDetails(){const{id}=useParams(),[data,setData]=useState(null),[q,setQ]=useState(''),[f,setF]=useState({from:'',to:'',month:'',purpose:'All'}),[page,setPage]=useState(1),[form,setForm]=useState(undefined),[remove,setRemove]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState('');const load=async()=>{const p=new URLSearchParams({page:String(page),search:q,...f});try{const r=await fetch('/api/workers/'+id+'?'+p);const text=await r.text();if(!r.ok)throw Error(text||'Unable to load worker transactions.');if(text)setData(JSON.parse(text))}catch(e){setError(e instanceof Error?e.message:'Unable to load worker transactions.')}};useEffect(()=>{if(!id)return;const t=setTimeout(()=>void load(),250);return()=>clearTimeout(t)},[id,q,f,page]);async function save(e){e.preventDefault();setBusy(true);const d=new FormData(e.currentTarget),r=await fetch(form?.id?'/api/workers/'+id+'/expenses/'+form.id:'/api/workers/'+id+'/expenses',{method:form?.id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(d))});setBusy(false);if(r.ok){setForm(undefined);load()}else setError((await r.json()).error)}if(!data)return <main className="management worker-details-page"><Link className="back-link" href="/workers"><ChevronLeft size={18}/> Back to Workers</Link>{error?<div className="form-error">{error}</div>:<p>Loading worker…</p>}</main>;const active=q||f.from||f.to||f.month||f.purpose!=='All';return <main className="management worker-details-page"><Link className="back-link" href="/workers"><ChevronLeft size={18}/> Back to Workers</Link><header className="management-head"><div><p className="eyebrow">WORKER DETAILS</p><h1>{data.worker.name}</h1><p>{data.worker.mobile}{data.worker.address&&' · '+data.worker.address}</p></div><button className="primary" onClick={()=>{setError('');setForm(null)}}><Plus size={16}/> Record expense</button></header><section className="worker-summary"><span>Total salary<b>{money(data.summary.salary)}</b></span><span>Other expenses<b>{money(data.summary.other)}</b></span><span>Total expenses<b>{money(data.summary.total)}</b></span></section><section className="card data-panel"><div className="worker-filter-grid"><input placeholder="Search description, category or method" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}}/><DateRangePicker from={f.from} to={f.to} onChange={(from,to)=>{setF(x=>({...x,from,to}));setPage(1)}}/><MonthPicker value={f.month} onChange={month=>{setF(x=>({...x,month}));setPage(1)}}/><select value={f.purpose} onChange={e=>{setF({...f,purpose:e.target.value});setPage(1)}}><option>All</option><option>Salary</option><option>Other</option></select>{active&&<button className="outline" onClick={()=>{setQ('');setF({from:'',to:'',month:'',purpose:'All'});setPage(1)}}>Clear filters</button>}</div><div className="worker-history-head"><b>Transaction history</b><small>{data.pagination.total} transactions</small></div><div className="worker-history-table"><div className="worker-history-row labels"><span>Date</span><span>Category</span><span>Description</span><span>Amount</span><span>Method</span><span>Actions</span></div>{data.ledger.map(x=><div className="worker-history-row" key={x.id}><span>{x.expenseDate}</span><b>{x.purpose}</b><span>{x.description||'—'}</span><b>{money(x.amount)}</b><span>{x.method}</span><span className="row-actions"><button onClick={()=>setForm(x)}><Pencil size={15}/></button><button className="danger" onClick={()=>setRemove(x)}><Trash2 size={15}/></button></span></div>)}</div><div className="list-footer-pagination"><ServerListPagination page={data.pagination.page} pageCount={data.pagination.pages} total={data.pagination.total} pageSize={data.pagination.limit} setPage={setPage}/></div></section>{form!==undefined&&<ExpenseForm form={form} close={()=>setForm(undefined)} save={save} busy={busy} error={error}/>} {remove&&<div className="modal delete-confirm-modal"><div className="modal-backdrop"/><section className="supplier-form card"><h2>Delete expense?</h2><p>This worker expense and linked main expense record will be removed.</p><div className="confirm-actions"><button className="outline" onClick={()=>setRemove(null)}>Cancel</button><button className="delete-button" disabled={busy} onClick={async()=>{setBusy(true);const r=await fetch('/api/workers/'+id+'/expenses/'+remove.id,{method:'DELETE'});setBusy(false);if(r.ok){setRemove(null);load()}else setError((await r.json()).error)}}>{busy?'Deleting…':'Delete'}</button></div></section></div>}</main>}
-function ExpenseForm({form,close,save,busy,error}){return <div className="modal"><div className="modal-backdrop"/><section className="supplier-form card worker-expense-form"><button className="sheet-close" onClick={close}><X/></button><h2>{form?'Edit expense':'Record expense'}</h2><form onSubmit={save}><label>Date<input name="date" type="date" max={today} defaultValue={form?.expenseDate||today} required/></label><label>Purpose<select name="purpose" defaultValue={form?.purpose||'Salary'}><option>Salary</option><option>Other</option></select></label><label>Description <small>(required for Other)</small><textarea name="description" defaultValue={form?.description}/></label><label>Amount (AED)<input name="amount" type="number" min=".01" step=".01" defaultValue={form?.amount} required/></label><label>Payment method<select name="method" defaultValue={form?.method||'Cash'}><option>Cash</option><option>Card</option><option>Bank Transfer</option></select></label>{error&&<div className="form-error">{error}</div>}<button className="primary" disabled={busy}>{busy?(form?'Updating…':'Recording…'):(form?'Update expense':'Record expense')}</button></form></section></div>}
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { ChevronLeft, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ServerListPagination } from '@/components/list-controls';
+import { DateRangePicker, MonthPicker } from '@/components/filter-date-pickers';
+
+const money = (x) => `AED ${Number(x).toLocaleString('en-AE', { minimumFractionDigits: 2 })}`;
+const today = new Date().toISOString().slice(0, 10);
+
+export default function WorkerDetails() {
+  const { id } = useParams();
+  const [data, setData] = useState(null);
+  const [q, setQ] = useState('');
+  const [f, setF] = useState({ from: '', to: '', month: '', purpose: 'All' });
+  const [page, setPage] = useState(1);
+  const [form, setForm] = useState(undefined);
+  const [remove, setRemove] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = async () => {
+    const p = new URLSearchParams({ page: String(page), search: q, ...f });
+    try {
+      const r = await fetch('/api/workers/' + id + '?' + p);
+      const text = await r.text();
+      if (!r.ok) throw Error(text || 'Unable to load worker transactions.');
+      if (text) setData(JSON.parse(text));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to load worker transactions.');
+    }
+  };
+
+  useEffect(() => {
+    if (!id) return;
+    const t = setTimeout(() => void load(), 250);
+    return () => clearTimeout(t);
+  }, [id, q, f, page]);
+
+  async function save(e) {
+    e.preventDefault();
+    setBusy(true);
+    const d = new FormData(e.currentTarget);
+    const r = await fetch(
+      form?.id ? '/api/workers/' + id + '/expenses/' + form.id : '/api/workers/' + id + '/expenses',
+      {
+        method: form?.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(d)),
+      }
+    );
+    setBusy(false);
+    if (r.ok) {
+      setForm(undefined);
+      load();
+    } else setError((await r.json()).error);
+  }
+
+  if (!data)
+    return (
+      <main className="management worker-details-page">
+        <Link className="back-link" href="/workers">
+          <ChevronLeft size={18} /> Back to Workers
+        </Link>
+        {error ? <div className="form-error">{error}</div> : <p>Loading worker…</p>}
+      </main>
+    );
+
+  const active = q || f.from || f.to || f.month || f.purpose !== 'All';
+
+  return (
+    <main className="management worker-details-page">
+      <Link className="back-link" href="/workers">
+        <ChevronLeft size={18} /> Back to Workers
+      </Link>
+      <header className="management-head">
+        <div>
+          <p className="eyebrow">WORKER DETAILS</p>
+          <h1>{data.worker.name}</h1>
+          <p>
+            {data.worker.mobile}
+            {data.worker.address && ' · ' + data.worker.address}
+          </p>
+        </div>
+        <button className="primary" onClick={() => { setError(''); setForm(null); }}>
+          <Plus size={16} /> <span>Record expense</span>
+        </button>
+      </header>
+
+      <section className="worker-summary">
+        <span>
+          Total salary<b>{money(data.summary.salary)}</b>
+        </span>
+        <span>
+          Other expenses<b>{money(data.summary.other)}</b>
+        </span>
+        <span>
+          Total expenses<b>{money(data.summary.total)}</b>
+        </span>
+      </section>
+
+      <section className="card data-panel">
+        <div className="worker-filter-grid">
+          <input
+            placeholder="Search description, category or method"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+          />
+          <DateRangePicker
+            from={f.from}
+            to={f.to}
+            onChange={(from, to) => {
+              setF((x) => ({ ...x, from, to }));
+              setPage(1);
+            }}
+          />
+          <MonthPicker
+            value={f.month}
+            onChange={(month) => {
+              setF((x) => ({ ...x, month }));
+              setPage(1);
+            }}
+          />
+          <select
+            value={f.purpose}
+            onChange={(e) => {
+              setF({ ...f, purpose: e.target.value });
+              setPage(1);
+            }}
+          >
+            <option>All</option>
+            <option>Salary</option>
+            <option>Other</option>
+          </select>
+          {active && (
+            <button
+              className="outline"
+              onClick={() => {
+                setQ('');
+                setF({ from: '', to: '', month: '', purpose: 'All' });
+                setPage(1);
+              }}
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        <div className="worker-history-head">
+          <b>Transaction history</b>
+          <small>{data.pagination.total} transactions</small>
+        </div>
+
+        {/* DESKTOP TABLE VIEW */}
+        <div className="worker-history-table desktop-only">
+          <div className="worker-history-row labels">
+            <span>Date</span>
+            <span>Category</span>
+            <span>Description</span>
+            <span>Amount</span>
+            <span>Method</span>
+            <span>Actions</span>
+          </div>
+          {data.ledger.map((x) => (
+            <div className="worker-history-row" key={x.id}>
+              <span>{x.expenseDate}</span>
+              <b>{x.purpose}</b>
+              <span>{x.description || '—'}</span>
+              <b>{money(x.amount)}</b>
+              <span>{x.method}</span>
+              <span className="row-actions">
+                <button onClick={() => setForm(x)}>
+                  <Pencil size={15} />
+                </button>
+                <button className="danger" onClick={() => setRemove(x)}>
+                  <Trash2 size={15} />
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* MOBILE CARDS VIEW */}
+        <div className="mobile-only" style={{ marginTop: '12px' }}>
+          {data.ledger.map((x) => (
+            <div key={x.id} className="erp-mobile-card">
+              <div className="erp-mobile-card-header">
+                <div>
+                  <span className="status paid" style={{ fontSize: '10px' }}>
+                    {x.purpose}
+                  </span>
+                  <div className="erp-mobile-card-subtitle" style={{ marginTop: '4px' }}>
+                    {x.expenseDate} · {x.method}
+                  </div>
+                </div>
+                <b style={{ fontSize: '14px', color: '#168d65' }}>{money(x.amount)}</b>
+              </div>
+
+              <div className="erp-mobile-card-body full-width">
+                <div className="erp-mobile-field">
+                  <label>Description</label>
+                  <span>{x.description || '—'}</span>
+                </div>
+              </div>
+
+              <div className="erp-mobile-card-actions">
+                <button title="Edit Expense" onClick={() => setForm(x)}>
+                  <Pencil size={15} /> <span>Edit</span>
+                </button>
+                <button className="danger" title="Delete Expense" onClick={() => setRemove(x)}>
+                  <Trash2 size={15} /> <span>Delete</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="list-footer-pagination">
+          <ServerListPagination
+            page={data.pagination.page}
+            pageCount={data.pagination.pages}
+            total={data.pagination.total}
+            pageSize={data.pagination.limit}
+            setPage={setPage}
+          />
+        </div>
+      </section>
+
+      {form !== undefined && (
+        <ExpenseForm form={form} close={() => setForm(undefined)} save={save} busy={busy} error={error} />
+      )}
+      {remove && (
+        <div className="modal delete-confirm-modal">
+          <div className="modal-backdrop" onClick={() => setRemove(null)} />
+          <section className="supplier-form card">
+            <h2>Delete expense?</h2>
+            <p>This worker expense and linked main expense record will be removed.</p>
+            <div className="confirm-actions">
+              <button className="outline" onClick={() => setRemove(null)}>
+                Cancel
+              </button>
+              <button
+                className="delete-button"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  const r = await fetch('/api/workers/' + id + '/expenses/' + remove.id, {
+                    method: 'DELETE',
+                  });
+                  setBusy(false);
+                  if (r.ok) {
+                    setRemove(null);
+                    load();
+                  } else setError((await r.json()).error);
+                }}
+              >
+                {busy ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+    </main>
+  );
+}
+
+function ExpenseForm({ form, close, save, busy, error }) {
+  return (
+    <div className="modal">
+      <div className="modal-backdrop" onClick={close} />
+      <section className="supplier-form card worker-expense-form">
+        <button className="sheet-close" onClick={close}>
+          <X />
+        </button>
+        <h2>{form ? 'Edit expense' : 'Record expense'}</h2>
+        <form onSubmit={save}>
+          <label>
+            Date
+            <input name="date" type="date" max={today} defaultValue={form?.expenseDate || today} required />
+          </label>
+          <label>
+            Purpose
+            <select name="purpose" defaultValue={form?.purpose || 'Salary'}>
+              <option>Salary</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>
+            Description <small>(required for Other)</small>
+            <textarea name="description" defaultValue={form?.description} />
+          </label>
+          <label>
+            Amount (AED)
+            <input name="amount" type="number" min=".01" step=".01" defaultValue={form?.amount} required />
+          </label>
+          <label>
+            Payment method
+            <select name="method" defaultValue={form?.method || 'Cash'}>
+              <option>Cash</option>
+              <option>Card</option>
+              <option>Bank Transfer</option>
+            </select>
+          </label>
+          {error && <div className="form-error">{error}</div>}
+          <button className="primary" disabled={busy}>
+            {busy ? (form ? 'Updating…' : 'Recording…') : form ? 'Update expense' : 'Record expense'}
+          </button>
+        </form>
+      </section>
+    </div>
+  );
+}
