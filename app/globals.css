@@ -1519,5 +1519,144 @@ button:not(:disabled),a[href]{-webkit-tap-highlight-color:transparent;touch-acti
   }
 }
 
+/* View-detail and statement modal sizing. Scoped so other page layouts remain unchanged. */
+.modal > .purchase-details {
+  width: min(760px, calc(100vw - 48px)) !important;
+  max-width: calc(100vw - 48px) !important;
+  max-height: calc(100dvh - 48px) !important;
+  overflow: auto !important;
+  padding: 30px 34px !important;
+}
+
+.purchase-details .detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.purchase-details .detail-grid span,
+.purchase-details .detail-note {
+  overflow-wrap: anywhere;
+}
+
+.modal.document-modal {
+  padding: 16px !important;
+  overflow: hidden !important;
+}
+
+.document-modal > .document-modal-card {
+  width: min(1100px, calc(100vw - 32px)) !important;
+  max-width: calc(100vw - 32px) !important;
+  height: min(920px, calc(100dvh - 32px)) !important;
+  max-height: calc(100dvh - 32px) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.document-modal-card > .document-actions {
+  position: relative !important;
+  top: auto !important;
+  flex: 0 0 auto !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  min-height: 60px !important;
+  padding: 10px 16px !important;
+}
+
+.document-modal-card > .document-actions .primary,
+.document-modal-card > .document-actions .statement-close-button {
+  width: auto !important;
+  min-width: 0 !important;
+  height: 38px !important;
+  padding: 0 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  white-space: nowrap !important;
+}
+
+.document-modal-card > .statement-document-content {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.statement-document-content > .financial-document {
+  min-width: 760px !important;
+  padding: 28px !important;
+}
+
+@media (max-width: 700px) {
+  .modal > .purchase-details {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100dvh - 96px) !important;
+    padding: 22px 18px !important;
+    border-radius: 14px !important;
+  }
+
+  .purchase-details .detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 11px !important;
+  }
+
+  .purchase-details .financial-flow {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .purchase-details .financial-flow i {
+    display: none;
+  }
+
+  .modal.document-modal {
+    display: grid !important;
+    place-items: center !important;
+    padding: 8px 8px calc(80px + env(safe-area-inset-bottom)) !important;
+    background: transparent !important;
+  }
+
+  .document-modal > .document-modal-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: calc(100dvh - 96px - env(safe-area-inset-bottom)) !important;
+    max-height: calc(100dvh - 96px - env(safe-area-inset-bottom)) !important;
+    margin: auto !important;
+    border-radius: 14px !important;
+  }
+
+  .document-modal-card > .document-actions {
+    min-height: 56px !important;
+    padding: 9px 12px !important;
+    gap: 8px !important;
+  }
+
+  .document-modal-card > .document-actions .primary,
+  .document-modal-card > .document-actions .statement-close-button {
+    height: 36px !important;
+    padding: 0 10px !important;
+    font-size: 11px !important;
+  }
+
+  .statement-document-content > .financial-document {
+    min-width: 0 !important;
+    padding: 18px 14px 24px !important;
+  }
+
+  .statement-document-content .document-table-wrap {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .statement-document-content .financial-document table {
+    min-width: 680px !important;
+  }
+}
 
 

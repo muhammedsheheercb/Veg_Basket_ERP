@@ -664,9 +664,6 @@ function Statement({ ledger, close }: any) {
     <div className="modal document-modal">
       <div className="modal-backdrop" onClick={close} />
       <section className="document-modal-card card">
-        <button className="sheet-close no-print" onClick={close}>
-          <X />
-        </button>
         <div className="document-actions no-print">
           <button
             className="primary"
@@ -681,9 +678,14 @@ function Statement({ ledger, close }: any) {
             }
           >
             <Download size={15} />
+            <span>Download PDF</span>
+          </button>
+          <button className="outline statement-close-button" onClick={close}>
+            <X size={15} />
+            <span>Close</span>
           </button>
         </div>
-        <div ref={statementRef}>
+        <div className="statement-document-content" ref={statementRef}>
           <FinancialDocument
             kind="Customer Statement"
             title={"Customer statement · " + ledger.customer.name}

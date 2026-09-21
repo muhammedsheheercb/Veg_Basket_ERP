@@ -327,12 +327,6 @@ export default function Suppliers() {
         <div className="modal document-modal">
           <div className="modal-backdrop" onClick={() => setView(null)} />
           <section className="document-modal-card card">
-            <button
-              className="sheet-close no-print"
-              onClick={() => setView(null)}
-            >
-              <X />
-            </button>
             <div className="document-actions no-print">
               <button
                 className="primary"
@@ -341,9 +335,17 @@ export default function Suppliers() {
                 onClick={pdf}
               >
                 <Download size={15} />
+                <span>Download PDF</span>
+              </button>
+              <button
+                className="outline statement-close-button"
+                onClick={() => setView(null)}
+              >
+                <X size={15} />
+                <span>Close</span>
               </button>
             </div>
-            <div ref={statementRef as any}>
+            <div className="statement-document-content" ref={statementRef as any}>
               <FinancialDocument
                 kind="Supplier Statement"
                 title={`Supplier statement · ${view.supplier.name}`}
