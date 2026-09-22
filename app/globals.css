@@ -1045,15 +1045,15 @@ button:not(:disabled),a[href]{-webkit-tap-highlight-color:transparent;touch-acti
 @media(max-width:700px){.modal .party-form-modal{width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;max-height:calc(100dvh - 32px)!important;margin:auto!important;padding:22px 18px 24px!important;border-radius:14px!important}.party-form-modal form{gap:14px;margin-top:18px}.party-form-modal .sheet-close{top:0;right:0;margin:0 0 8px auto}}
 
 /* Purchase editor: preserve its existing form while giving it room to breathe. */
-.modal.no-print .supplier-form:has(select[name="supplierId"]){width:min(620px,calc(100vw - 48px));max-height:calc(100dvh - 48px);padding:28px 30px;overflow-y:auto;overscroll-behavior:contain}
-.modal.no-print .supplier-form:has(select[name="supplierId"]) form{gap:16px;margin-top:22px}.modal.no-print .supplier-form:has(select[name="supplierId"]) h2{padding-right:42px}.modal.no-print .supplier-form:has(select[name="supplierId"]) .sheet-close{right:18px;top:18px}
-@media(max-width:700px){.modal.no-print .supplier-form:has(select[name="supplierId"]){width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;max-height:calc(100dvh - 32px)!important;margin:auto!important;padding:22px 18px 24px!important;border-radius:14px!important}.modal.no-print .supplier-form:has(select[name="supplierId"]) form{gap:14px;margin-top:18px}.modal.no-print .supplier-form:has(select[name="supplierId"]) .sheet-close{top:0;right:0;margin:0 0 8px auto}}
+.modal.no-print .supplier-form.purchase-editor{width:min(620px,calc(100vw - 48px));max-height:calc(100dvh - 48px);padding:28px 30px;overflow-y:auto;overscroll-behavior:contain}
+.modal.no-print .supplier-form.purchase-editor form{gap:16px;margin-top:22px}.modal.no-print .supplier-form.purchase-editor h2{padding-right:42px}.modal.no-print .supplier-form.purchase-editor .sheet-close{right:18px;top:18px}
+@media(max-width:700px){.modal.no-print .supplier-form.purchase-editor{width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;max-height:calc(100dvh - 32px)!important;margin:auto!important;padding:22px 18px 24px!important;border-radius:14px!important}.modal.no-print .supplier-form.purchase-editor form{gap:14px;margin-top:18px}.modal.no-print .supplier-form.purchase-editor .sheet-close{top:0;right:0;margin:0 0 8px auto}}
 
 /* Spacious create/edit forms for items, workers, expenses, and worker ledger expenses. */
 .modal .item-form,.modal .worker-form,.modal .expense-form,.modal .worker-expense-form{width:min(680px,calc(100vw - 48px))!important;max-width:calc(100vw - 48px)!important;max-height:calc(100dvh - 48px)!important;padding:24px 28px!important;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain}
 .modal .worker-expense-form{width:min(640px,calc(100vw - 48px))!important}
 .item-form h2,.worker-form h2,.expense-form h2,.worker-expense-form h2{padding-right:40px!important;margin-bottom:6px!important;font-size:19px!important}.item-form .sheet-close,.worker-form .sheet-close,.expense-form .sheet-close,.worker-expense-form .sheet-close{top:18px!important;right:18px!important}
-.item-form form,.worker-form form,.expense-form form,.worker-expense-form form{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px!important;margin-top:18px!important}.item-form form>label:nth-of-type(3),.item-form form>label:nth-of-type(4),.worker-form form>label:nth-of-type(3),.worker-form form>label:nth-of-type(5),.expense-form form>label:nth-of-type(3),.worker-expense-form form>label:nth-of-type(3),.item-form .form-error,.worker-form .form-error,.expense-form .form-error,.worker-expense-form .form-error,.item-form form>.primary,.worker-form form>.primary,.expense-form form>.primary,.worker-expense-form form>.primary{grid-column:1/-1}.item-form textarea,.worker-form textarea,.expense-form textarea,.worker-expense-form textarea{min-height:80px}.item-form form>.primary,.worker-form form>.primary,.expense-form form>.primary,.worker-expense-form form>.primary{justify-content:center}
+.item-form form,.worker-form form,.expense-form form,.worker-expense-form form{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px!important;margin-top:18px!important}.item-form form>label:nth-of-type(3),.item-form form>label:nth-of-type(4),.worker-form form>label:nth-of-type(3),.worker-form form>label:nth-of-type(5),.expense-form form>.expense-description-field,.worker-expense-form form>label:nth-of-type(3),.item-form .form-error,.worker-form .form-error,.expense-form .form-error,.worker-expense-form .form-error,.item-form form>.primary,.worker-form form>.primary,.expense-form form>.primary,.worker-expense-form form>.primary{grid-column:1/-1}.item-form textarea,.worker-form textarea,.expense-form textarea,.worker-expense-form textarea{min-height:80px}.item-form form>.primary,.worker-form form>.primary,.expense-form form>.primary,.worker-expense-form form>.primary{justify-content:center}
 
 /* Explicit mobile cards for transactional lists: labels stay with their values. */
 @media(max-width:700px){
@@ -1694,4 +1694,15 @@ button:not(:disabled),a[href]{-webkit-tap-highlight-color:transparent;touch-acti
   .price-list-item-list{max-height:min(220px,32dvh)}
   .price-list-item-list button{grid-template-columns:1fr;gap:3px;min-height:48px;padding:9px 11px}
   .price-list-line.price-list-three-columns>.price-list-remove{margin-top:0}
+}
+
+
+/* The same inline, scrollable selector also fits the Sales, Purchase, and Expense forms. */
+.price-list-item-list button.no-code{grid-template-columns:minmax(0,1fr)}
+.sale-line{align-items:start}
+.sale-line>.price-list-item-field{min-width:0}
+.sale-line>.line-remove{margin-top:17px}
+@media(max-width:700px){
+  .sale-line>.price-list-item-field{grid-column:1/-1}
+  .sale-line>.line-remove{margin-top:0}
 }

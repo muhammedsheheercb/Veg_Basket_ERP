@@ -2,16 +2,24 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
-type Item = { id: string; code: string; name: string };
+type Item = { id: string; code?: string; name: string };
 
 export function PriceListItemPicker({
   items,
   selectedId,
   onSelect,
+  label = 'Item',
+  placeholder = 'Search or choose an item…',
+  name,
+  showCode = true,
 }: {
   items: Item[];
   selectedId: string;
   onSelect: (id: string) => void;
+  label?: string;
+  placeholder?: string;
+  name?: string;
+  showCode?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -25,7 +33,7 @@ export function PriceListItemPicker({
   const matches = useMemo(() => {
     const search = query.trim().toLocaleLowerCase();
     return search
-      ? items.filter(item => `${item.code} ${item.name}`.toLocaleLowerCase().includes(search))
+      ? items.filter(item => `${item.code || ''} ${item.name}`.toLocaleLowerCase().includes(search))
       : items;
   }, [items, query]);
 
@@ -43,7 +51,7 @@ export function PriceListItemPicker({
 
   useEffect(() => {
     inputRef.current?.setCustomValidity(
-      selectedId || !query ? '' : 'Select an item from the list.',
+      selectedId || !query ? '' : `Select ${label === 'Item' ? 'an' : 'a'} ${label.toLowerCase()} from the list.`,
     );
   }, [selectedId, query]);
 
@@ -64,7 +72,8 @@ export function PriceListItemPicker({
 
   return (
     <div className="price-list-item-field" ref={rootRef}>
-      <label htmlFor={`${listId}-input`}>Item</label>
+      <label htmlFor={`${listId}-input`}>{label}</label>
+      {name && <input type="hidden" name={name} value={selectedId} />}
       <input
         id={`${listId}-input`}
         ref={inputRef}
@@ -74,7 +83,7 @@ export function PriceListItemPicker({
         aria-controls={open ? listId : undefined}
         aria-activedescendant={open && matches.length ? `${listId}-${activeIndex}` : undefined}
         autoComplete="off"
-        value={query || (selected ? `${selected.code} — ${selected.name}` : '')}
+        value={query || (selected ? showCode && selected.code ? `${selected.code} — ${selected.name}` : selected.name : '')}
         onFocus={event => { setQuery(''); setActiveIndex(0); setOpen(true); event.currentTarget.select(); }}
         onChange={event => { onSelect(''); setQuery(event.target.value); setActiveIndex(0); setOpen(true); }}
         onBlur={event => {
@@ -100,11 +109,11 @@ export function PriceListItemPicker({
             choose(matches[activeIndex]);
           }
         }}
-        placeholder="Search or choose an item…"
+        placeholder={placeholder}
         required
       />
       {open && (
-        <div className="price-list-item-list" id={listId} role="listbox" ref={listRef} aria-label="Available items" onPointerDownCapture={() => { pointerInList.current = true; }} onPointerUpCapture={() => { pointerInList.current = false; }} onPointerCancelCapture={() => { pointerInList.current = false; }}>
+        <div className="price-list-item-list" id={listId} role="listbox" ref={listRef} aria-label={`Available ${label.toLowerCase()} options`} onPointerDownCapture={() => { pointerInList.current = true; }} onPointerUpCapture={() => { pointerInList.current = false; }} onPointerCancelCapture={() => { pointerInList.current = false; }}>
           {matches.length ? matches.map((item, index) => (
             <button
               type="button"
@@ -114,17 +123,33 @@ export function PriceListItemPicker({
               data-option-index={index}
               aria-selected={item.id === selectedId}
               data-mutation-guard-ignore
-              className={index === activeIndex ? 'active' : ''}
+              className={`${index === activeIndex ? 'active' : ''}${showCode && item.code ? '' : ' no-code'}`}
               key={item.id}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => choose(item)}
             >
-              <span className="price-list-item-code">{item.code}</span>
+              {showCode && item.code && <span className="price-list-item-code">{item.code}</span>}
               <span className="price-list-item-name">{item.name}</span>
             </button>
-          )) : <p>No matching items.</p>}
+          )) : <p>No matching {label.toLowerCase()}{label === 'Item' ? 's' : ''}.</p>}
         </div>
       )}
     </div>
   );
+}
+
+export { PriceListItemPicker as SearchableSelect };
+
+export function FormSearchableSelect({
+  initialValue = '',
+  ...props
+}: {
+  items: Item[];
+  initialValue?: string;
+  label: string;
+  placeholder: string;
+  name: string;
+}) {
+  const [selectedId, setSelectedId] = useState(initialValue);
+  return <PriceListItemPicker {...props} selectedId={selectedId} onSelect={setSelectedId} />;
 }

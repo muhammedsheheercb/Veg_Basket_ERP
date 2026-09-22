@@ -5,6 +5,7 @@ import { Download, Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { money, shortDate } from '@/components/financial-documents';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
 import { downloadPdf } from '@/components/pdf-download';
+import { FormSearchableSelect } from '@/components/price-list-item-picker';
 
 type P = { id: string; invoice: string; supplier: string; date: string; total: string; paid: string };
 type D = {
@@ -193,23 +194,20 @@ export default function Purchases() {
       {form !== undefined && (
         <div className="modal no-print">
           <div className="modal-backdrop" onClick={() => setForm(undefined)} />
-          <section className="supplier-form card">
+          <section className="supplier-form card purchase-editor">
             <button className="sheet-close" onClick={() => setForm(undefined)}>
               <X />
             </button>
             <h2>{form ? 'Edit purchase' : 'Add purchase'}</h2>
             <form onSubmit={save}>
-              <label>
-                Supplier
-                <select name="supplierId" required defaultValue={form?.supplierId}>
-                  <option value="">Select supplier</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FormSearchableSelect
+                key={form?.id || 'new'}
+                items={suppliers}
+                initialValue={form?.supplierId || ''}
+                label="Supplier"
+                placeholder="Search or choose a supplier…"
+                name="supplierId"
+              />
               <label>
                 Date
                 <input name="date" type="date" required defaultValue={form?.purchaseDate || new Date().toISOString().slice(0, 10)} />

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
 import { DateRangePicker, MonthPicker } from '@/components/filter-date-pickers';
+import { FormSearchableSelect } from '@/components/price-list-item-picker';
 
 const money = (x) => `AED ${Number(x).toLocaleString('en-AE', { minimumFractionDigits: 2 })}`;
 const today = new Date().toISOString().slice(0, 10);
@@ -269,15 +270,15 @@ function ExpenseForm({ form, close, save, busy, error }) {
             Date
             <input name="date" type="date" max={today} defaultValue={form?.date || today} required />
           </label>
-          <label>
-            Category
-            <select name="category" defaultValue={form?.category || 'Salary'}>
-              {cats.map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-          </label>
-          <label>
+          <FormSearchableSelect
+            key={form?.id || 'new'}
+            items={cats.map((x) => ({ id: x, name: x }))}
+            initialValue={form?.category || 'Salary'}
+            label="Category"
+            placeholder="Search or choose a category…"
+            name="category"
+          />
+          <label className="expense-description-field">
             Description <small>(required for Other)</small>
             <textarea name="description" defaultValue={form?.description} />
           </label>

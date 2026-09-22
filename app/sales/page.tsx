@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { CheckCircle2, Download, Eye, FileText, Leaf, Mail, MapPin, Pencil, Phone, Plus, Trash2, WalletCards, X } from 'lucide-react';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
 import { downloadPdf, downloadPdfFromElement } from '@/components/pdf-download';
+import { FormSearchableSelect, SearchableSelect } from '@/components/price-list-item-picker';
 
 type L = { itemId: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
 type R = { id: string; invoice: string; customer: string; date: string; total: string; paid: string };
@@ -52,7 +53,7 @@ export default function Sales() {
   const load = () => {
     fetch('/api/sales').then(r => r.json()).then(setRows);
     fetch('/api/customers').then(r => r.json()).then(setCustomers);
-    fetch('/api/items').then(r => r.json()).then(setItems);
+    fetch('/api/items?all=1').then(r => r.json()).then(setItems);
   };
   useEffect(load, []);
 
@@ -274,17 +275,14 @@ export default function Sales() {
             <h2>{form ? 'Edit sale' : 'Add sale'}</h2>
             <form onSubmit={save}>
               <div className="sale-form-grid">
-                <label>
-                  Customer
-                  <select name="customerId" required defaultValue={form?.customerId}>
-                    <option value="">Select customer</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <FormSearchableSelect
+                  key={form?.id || 'new'}
+                  items={customers}
+                  initialValue={form?.customerId || ''}
+                  label="Customer"
+                  placeholder="Search or choose a customer…"
+                  name="customerId"
+                />
                 <label>
                   Date
                   <input
@@ -306,19 +304,12 @@ export default function Sales() {
                 </div>
                 {lines.map((x, i) => (
                   <div className="sale-line" key={i}>
-                    <label>
-                      Item
-                      <select required value={x.itemId} onChange={e => changeItem(i, e.target.value)}>
-                        <option value="">Select item</option>
-                        {items
-                          .filter(a => a.active || a.id === x.itemId)
-                          .map(a => (
-                            <option key={a.id} value={a.id}>
-                              {a.code} · {a.name}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
+                    <SearchableSelect
+                      items={items.filter(a => a.active || a.id === x.itemId)}
+                      selectedId={x.itemId}
+                      onSelect={id => changeItem(i, id)}
+                      showCode={false}
+                    />
                     <label>
                       Qty
                       <input
