@@ -1675,3 +1675,23 @@ button:not(:disabled),a[href]{-webkit-tap-highlight-color:transparent;touch-acti
   .modal:has(.price-list-form){padding-left:6px!important;padding-right:6px!important}
   .modal:has(.price-list-form)>.price-list-form{padding-left:18px!important;padding-right:18px!important}
 }
+
+
+/* Keep item choices inside the scrollable price-list sheet on every screen size. */
+.price-list-line.price-list-three-columns{align-items:start}
+.price-list-item-field{display:grid;gap:6px;min-width:0}
+.price-list-item-field>input{width:100%;min-width:0}
+.price-list-item-list{width:100%;max-height:min(260px,36dvh);overflow-y:auto;overscroll-behavior:contain;border:1px solid #dbe7e0;border-radius:8px;background:#fff;box-shadow:0 5px 14px #17212b12}
+.price-list-item-list button{display:grid;grid-template-columns:92px minmax(0,1fr);align-items:start;gap:10px;width:100%;min-height:42px;padding:10px 12px;border:0;border-bottom:1px solid #edf2ee;background:#fff;color:var(--ink);font:inherit;font-size:12px;text-align:left;cursor:pointer}
+.price-list-item-list button:last-child{border-bottom:0}
+.price-list-item-list button:hover,.price-list-item-list button.active,.price-list-item-list button[aria-selected="true"]{background:#edf8f1}
+.price-list-item-code{color:#167b58;font-weight:700;white-space:nowrap}
+.price-list-item-name{min-width:0;overflow-wrap:anywhere}
+.price-list-item-list p{margin:0;padding:12px;color:var(--muted);font-size:12px}
+.price-list-line.price-list-three-columns>.price-list-remove{margin-top:17px}
+@media(max-width:700px){
+  .price-list-line.price-list-three-columns>.price-list-item-field{grid-column:1/-1}
+  .price-list-item-list{max-height:min(220px,32dvh)}
+  .price-list-item-list button{grid-template-columns:1fr;gap:3px;min-height:48px;padding:9px 11px}
+  .price-list-line.price-list-three-columns>.price-list-remove{margin-top:0}
+}
