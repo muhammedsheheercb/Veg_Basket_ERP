@@ -8,7 +8,7 @@ import { DateRangePicker, MonthPicker } from '@/components/filter-date-pickers';
 
 const money = (x) => `AED ${Number(x).toLocaleString('en-AE', { minimumFractionDigits: 2 })}`;
 const today = new Date().toISOString().slice(0, 10);
-const cats = ['Salary', 'Petrol/Fuel', 'Food', 'Vehicle Maintenance', 'Other'];
+const cats = ['Salary', 'Petrol/Fuel', 'Food', 'Grocery', 'Vehicle Maintenance', 'Other'];
 
 export default function Expenses() {
   const [data, setData] = useState({ rows: [], total: 0 });

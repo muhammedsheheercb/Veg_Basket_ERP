@@ -18,6 +18,7 @@ import {
   Wallet,
   WalletCards,
   Settings,
+  Tags,
   X, LogOut,
 } from 'lucide-react';
 import { LogoutConfirmation } from './logout-confirmation';
@@ -37,6 +38,7 @@ const moreItems = [
   { label: 'Customers', href: '/customers', icon: Users, desc: 'Manage clients & receivable balances', bg: '#eff6ff', color: '#2563eb' },
   { label: 'Expenses', href: '/expenses', icon: WalletCards, desc: 'Operating & daily shop expenses', bg: '#f5f3ff', color: '#7c3aed' },
   { label: 'Items', href: '/items', icon: Boxes, desc: 'Inventory products & item codes', bg: '#ecfeff', color: '#0891b2' },
+  { label: 'Price List', href: '/price-lists', icon: Tags, desc: 'Create customer price quotations', bg: '#f0fdf4', color: '#168d65' },
   { label: 'Reports', href: '/reports', icon: LayoutList, desc: 'Financial summaries & ledger reports', bg: '#f1f5f9', color: '#475569' },
   { label: 'Settings', href: '/settings', icon: Settings, desc: 'User profile name & password change', bg: '#f1f5f9', color: '#0f172a' },
 ] as const;

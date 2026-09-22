@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Boxes, FileText, HardHat, Home, Landmark, LayoutList, LogOut, Menu, Settings, ShoppingCart, Truck, Users, Wallet, WalletCards, X } from 'lucide-react';
+import { Boxes, FileText, HardHat, Home, Landmark, LayoutList, LogOut, Menu, Settings, ShoppingCart, Tags, Truck, Users, Wallet, WalletCards, X } from 'lucide-react';
 import { useState } from 'react';
 import { LogoutConfirmation } from './logout-confirmation';
 
@@ -22,6 +22,7 @@ const navGroups = [
       ['Suppliers', '/suppliers', Truck],
       ['Customers', '/customers', Users],
       ['Items', '/items', Boxes],
+      ['Price List', '/price-lists', Tags],
     ],
   },
   {
@@ -108,5 +109,4 @@ export function AppSidebar({ active }: { active: string }) {
     </>
   );
 }
-
 
