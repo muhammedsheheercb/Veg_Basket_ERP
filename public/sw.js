@@ -1,8 +1,7 @@
-const CACHE_NAME = 'veg-basket-v2';
+const CACHE_NAME = 'veg-basket-v3';
 const OFFLINE_URL = '/offline';
 
 const PRECACHE_ASSETS = [
-  '/',
   '/offline',
   '/images/logo.webp',
   '/icons/icon-192.png',
@@ -80,25 +79,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Network-First for HTML Page Navigations with Offline Fallback
+  // 3. Pages, especially login and authenticated pages, are always network-only.
+  // Caching HTML can show an old login/dashboard after a session changes and is
+  // unsafe on a shared phone. Only the offline fallback is cached.
   if (request.mode === 'navigate' || (request.method === 'GET' && request.headers.get('accept')?.includes('text/html'))) {
     event.respondWith(
       fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            return caches.match(OFFLINE_URL);
-          });
-        })
+        .catch(() => caches.match(OFFLINE_URL))
     );
     return;
   }
