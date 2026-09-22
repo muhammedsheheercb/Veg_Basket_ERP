@@ -27,4 +27,8 @@ export async function proxy(request: NextRequest) {
   return NextResponse.redirect(new URL('/login', request.url));
 }
 
-export const config = { matcher: ['/((?!login|unauthorized|_next|images|favicon.ico).*)'] };
+export const config = {
+  matcher: [
+    '/((?!login|unauthorized|_next|images|icons|favicon.ico|sw\\.js|manifest\\.webmanifest|offline).*)',
+  ],
+};
