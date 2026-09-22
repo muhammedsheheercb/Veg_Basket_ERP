@@ -1669,3 +1669,9 @@ button:not(:disabled),a[href]{-webkit-tap-highlight-color:transparent;touch-acti
 @media(max-width:700px){.price-list-line.price-list-three-columns{grid-template-columns:1fr 1fr}.price-list-line.price-list-three-columns .price-list-remove{grid-column:1/-1}}
 .modal:has(.price-list-form),.modal:has(.price-list-preview){z-index:150!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;padding:20px!important}.modal:has(.price-list-form)>.modal-backdrop,.modal:has(.price-list-preview)>.modal-backdrop{z-index:0}.modal:has(.price-list-form)>.price-list-form,.modal:has(.price-list-preview)>.price-list-preview{position:relative!important;z-index:1!important;margin:0!important;max-height:calc(100dvh - 40px)!important;overflow:auto!important;overscroll-behavior:contain!important}.modal:has(.price-list-preview)>.price-list-preview{display:block!important;width:min(900px,calc(100vw - 40px))!important;min-height:0!important}.price-list-preview .sheet-close{z-index:2}.price-list-preview .price-sheet-table{max-width:100%;overflow:auto}
 @media(max-width:700px){.modal:has(.price-list-form),.modal:has(.price-list-preview){padding:12px 12px calc(84px + env(safe-area-inset-bottom))!important}.modal:has(.price-list-form)>.price-list-form,.modal:has(.price-list-preview)>.price-list-preview{width:100%!important;max-width:100%!important;max-height:calc(100dvh - 96px)!important;padding:20px 16px!important}.price-list-preview .price-sheet-table{overflow-x:auto!important}.price-list-preview .price-sheet-table table{min-width:520px!important}}
+
+/* Let the create/edit price-list sheet use more of a phone's available width. */
+@media(max-width:700px){
+  .modal:has(.price-list-form){padding-left:6px!important;padding-right:6px!important}
+  .modal:has(.price-list-form)>.price-list-form{padding-left:18px!important;padding-right:18px!important}
+}
