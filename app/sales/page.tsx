@@ -102,34 +102,69 @@ export default function Sales() {
     const modal = editorModalRef.current;
     if (!editor || !modal) return;
     const viewport = window.visualViewport;
+    const mobile = window.matchMedia('(max-width: 700px)');
+    const formElement = editor.querySelector('form');
+    let layoutWidth = window.innerWidth;
+    let layoutHeight = window.innerHeight;
     let frame = 0;
+    const pageScroll = window.scrollY;
+    const bodyStyle = document.body.style.cssText;
+    const rootOverflow = document.documentElement.style.overflow;
+    const lockPageScroll = mobile.matches;
+    if (lockPageScroll) {
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${pageScroll}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    }
     const update = () => {
-      modal.style.setProperty('--sales-viewport-top', `${viewport?.offsetTop || 0}px`);
-      modal.style.setProperty('--sales-viewport-height', `${viewport?.height || window.innerHeight}px`);
-      const input = document.activeElement;
-      if (input instanceof HTMLInputElement && editor.contains(input)) {
-        revealSalesInput(editor, input);
+      if (mobile.matches) {
+        // Keyboard changes only the content's visible scroll area. Keep the
+        // panel's top, width and outer height independent of those changes.
+        if (layoutWidth !== window.innerWidth) {
+          layoutWidth = window.innerWidth;
+          layoutHeight = window.innerHeight;
+        }
+        modal.style.setProperty('--sales-layout-height', `${layoutHeight}px`);
+        if (formElement) {
+          const bottom = Math.min(layoutHeight, (viewport?.offsetTop || 0) + (viewport?.height || window.innerHeight));
+          const top = formElement.getBoundingClientRect().top;
+          modal.style.setProperty('--sales-content-height', `${Math.max(0, bottom - top - 24)}px`);
+        }
+      } else {
+        modal.style.setProperty('--sales-viewport-top', `${viewport?.offsetTop || 0}px`);
+        modal.style.setProperty('--sales-viewport-height', `${viewport?.height || window.innerHeight}px`);
       }
+      const input = document.activeElement;
+      if (input instanceof HTMLInputElement && editor.contains(input)) revealSalesInput(editor, input);
     };
     const schedule = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(update);
     };
+    const cancelScroll = () => cancelSalesInputScroll(editor);
     update();
     viewport?.addEventListener('resize', schedule);
     viewport?.addEventListener('scroll', schedule);
     window.addEventListener('resize', schedule);
     editor.addEventListener('focusin', schedule);
-    const observer = new ResizeObserver(schedule);
-    observer.observe(editor);
+    editor.addEventListener('touchstart', cancelScroll, { passive: true });
+    editor.addEventListener('wheel', cancelScroll, { passive: true });
     return () => {
       cancelAnimationFrame(frame);
       cancelSalesInputScroll(editor);
-      observer.disconnect();
       viewport?.removeEventListener('resize', schedule);
       viewport?.removeEventListener('scroll', schedule);
       window.removeEventListener('resize', schedule);
       editor.removeEventListener('focusin', schedule);
+      editor.removeEventListener('touchstart', cancelScroll);
+      editor.removeEventListener('wheel', cancelScroll);
+      if (lockPageScroll) {
+        document.body.style.cssText = bodyStyle;
+        document.documentElement.style.overflow = rootOverflow;
+        window.scrollTo({ top: pageScroll, behavior: 'instant' });
+      }
     };
   }, [form]);
 
@@ -442,6 +477,9 @@ export default function Sales() {
                     <button
                       type="button"
                       className="line-remove danger"
+                      data-delete-confirmation-ignore="true"
+                      aria-label="Remove invoice item"
+                      title="Remove invoice item"
                       disabled={lines.length === 1}
                       onClick={() => setLines(a => a.filter((_, n) => n !== i))}
                     >

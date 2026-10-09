@@ -1741,3 +1741,71 @@ button:not(:disabled),a[href]{-webkit-tap-highlight-color:transparent;touch-acti
     font-size:16px;
   }
 }
+
+/* Mobile Sales has a stationary panel and one independent content scroller. */
+@media(max-width:700px){
+  .modal.sales-editor-modal{
+    top:0!important;
+    height:var(--sales-layout-height,100svh)!important;
+    align-items:flex-start!important;
+    padding:12px!important;
+  }
+  .modal.sales-editor-modal>.sales-editor{
+    display:flex!important;
+    flex-direction:column;
+    flex:none;
+    height:calc(var(--sales-layout-height,100svh) - 24px)!important;
+    max-height:none!important;
+    width:calc(100% - 0px)!important;
+    max-width:100%!important;
+    padding:18px 16px!important;
+    overflow:hidden!important;
+  }
+  .sales-editor-modal .sales-editor>h2{
+    flex:none;
+    margin:0 42px 16px 0;
+    min-height:24px;
+  }
+  .sales-editor-modal .sales-editor>form{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    min-height:0;
+    height:var(--sales-content-height,calc(100svh - 110px));
+    max-height:var(--sales-content-height,calc(100svh - 110px));
+    margin:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+    overflow-anchor:none;
+    scrollbar-gutter:stable;
+    scroll-padding-block:12px;
+    padding-bottom:env(safe-area-inset-bottom);
+    -webkit-overflow-scrolling:touch;
+  }
+  .sales-editor-modal .sales-editor>form>*{flex-shrink:0;min-width:0}
+  .sales-editor .sale-form-grid,
+  .sales-editor .sale-lines,
+  .sales-editor .sale-line,
+  .sales-editor label{min-width:0;max-width:100%}
+  .sales-editor .sale-line{grid-template-columns:repeat(2,minmax(0,1fr));align-items:end}
+  .sales-editor input,
+  .sales-editor select,
+  .sales-editor textarea{width:100%;min-width:0;max-width:100%;font-size:16px!important}
+  .sales-editor .sale-line>.line-remove,
+  .sales-editor .sale-line>.line-next{margin:0!important;align-self:end;height:40px;width:40px}
+  .sales-editor .sales-submit{position:static;flex-shrink:0;width:100%;min-height:44px}
+}
+@media(max-width:700px){
+  .modal.sales-editor-modal>.sales-editor{position:relative!important}
+  .sales-editor-modal .sales-editor>.sheet-close{
+    position:absolute!important;
+    top:14px!important;
+    right:14px!important;
+    float:none!important;
+    margin:0!important;
+    width:34px;
+    height:34px;
+    padding:6px;
+  }
+}
