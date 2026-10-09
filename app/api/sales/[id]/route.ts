@@ -7,9 +7,9 @@ import { customerPayments, customerSales, customers, items, saleItems } from '@/
 
 const cents = (v: any) => {
   const s = String(v ?? '');
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
+  if (!/^\d+(\.\d{1,3})?$/.test(s)) return null;
   const [a, b = ''] = s.split('.');
-  const amount = +a * 100 + +(b + '00').slice(0, 2);
+  const amount = +a * 1000 + +(b + '000').slice(0, 3);
   return Number.isSafeInteger(amount) && amount < 100000000000000 ? amount : null;
 };
 const valid = (x: string) => /^[0-9a-f-]{36}$/i.test(x);
@@ -21,21 +21,20 @@ function parseLine(x: any) {
   const rawQty = String(x.quantity ?? '').trim();
   const match = rawQty.match(/^(\d+(?:\.\d{1,3})?)\s*([^\d.].*)?$/);
   const numQty = match ? parseFloat(match[1]) : 0;
-  if (!Number.isFinite(numQty) || numQty <= 0 || numQty >= 100000000000) return null;
+  if (!Number.isFinite(numQty) || numQty < 1 || numQty >= 100000000000) return null;
 
   const unitStr = (match && match[2] ? match[2].trim() : (x.unit ? String(x.unit).trim() : '')) || null;
   let totalCents = cents(x.lineTotal);
   let priceCents = cents(x.unitPrice);
 
-  if (totalCents === null && priceCents !== null) {
+  if (priceCents !== null) {
+    // The server owns calculated amounts; never trust a submitted line total.
     totalCents = Math.round(numQty * priceCents);
-  } else if (totalCents !== null && (priceCents === null || priceCents === 0)) {
+  } else if (totalCents !== null) {
+    // Preserve compatibility with older clients submitting only an amount.
     priceCents = Math.round(totalCents / numQty);
   }
-
-  if (totalCents === null || priceCents === null) return null;
-  priceCents = Math.round(totalCents / numQty);
-  if (priceCents >= 100000000000000) return null;
+  if (totalCents === null || priceCents === null || !Number.isSafeInteger(totalCents) || totalCents >= 100000000000000 || priceCents >= 100000000000000) return null;
 
   return {
     itemId: itemId || null,
@@ -53,6 +52,7 @@ function parse(b: any) {
   const lines = rawLines.map(parseLine);
   if (!valid(String(b.customerId)) || !/^\d{4}-\d{2}-\d{2}$/.test(b.date) || !lines.length || lines.some(x => !x) || discount === null || paid === null) return null;
   const subtotal = lines.reduce((n: number, x) => n + x.lineTotal, 0);
+  if (!Number.isSafeInteger(subtotal) || subtotal >= 100000000000000) return null;
   const total = subtotal - discount;
   if (discount > subtotal || paid > total) return null;
   return { ...b, discount, paid, subtotal, total, lines };
@@ -69,17 +69,17 @@ export async function PUT(r: Request, { params }: { params: Promise<{ id: string
   try {
     const id = (await params).id;
     const payments = await db.select().from(customerPayments).where(eq(customerPayments.saleId, id));
-    if (v.paid < payments.reduce((n, p) => n + Number(p.amount) * 100, 0)) {
+    if (v.paid < payments.reduce((n, p) => n + Number(p.amount) * 1000, 0)) {
       return NextResponse.json({ error: 'Paid amount cannot be lower than recorded payments.' }, { status: 400 });
     }
     await db.transaction(async tx => {
       await tx.update(customerSales).set({
         customerId: v.customerId,
         saleDate: v.date,
-        subtotal: (v.subtotal / 100).toFixed(2),
-        discount: (v.discount / 100).toFixed(2),
-        total: (v.total / 100).toFixed(2),
-        paid: (v.paid / 100).toFixed(2),
+        subtotal: (v.subtotal / 1000).toFixed(3),
+        discount: (v.discount / 1000).toFixed(3),
+        total: (v.total / 1000).toFixed(3),
+        paid: (v.paid / 1000).toFixed(3),
         paymentMethod: v.method || null,
         notes: v.notes || null
       }).where(eq(customerSales.id, id));
@@ -91,8 +91,8 @@ export async function PUT(r: Request, { params }: { params: Promise<{ id: string
         position,
         quantity: (x.quantity / 1000).toFixed(3),
         unit: x.unit || null,
-        unitPrice: (x.unitPrice / 100).toFixed(2),
-        lineTotal: (x.lineTotal / 100).toFixed(2)
+        unitPrice: (x.unitPrice / 1000).toFixed(3),
+        lineTotal: (x.lineTotal / 1000).toFixed(3)
       })));
     });
     return NextResponse.json({ ok: true });

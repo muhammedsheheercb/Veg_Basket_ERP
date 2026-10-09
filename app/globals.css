@@ -1809,3 +1809,36 @@ button:not(:disabled),a[href]{-webkit-tap-highlight-color:transparent;touch-acti
     padding:6px;
   }
 }
+
+/* Compact invoice entry stays a table at every viewport width. */
+.sales-editor .sales-entry-table{display:table!important;width:100%!important;min-width:0!important;table-layout:fixed;border-collapse:collapse;border:1px solid var(--line);margin:8px 0}
+.sales-entry-table .entry-item{width:36%}.sales-entry-table .entry-qty{width:20%}.sales-entry-table .entry-rate{width:15%}.sales-entry-table .entry-amount{width:17%}.sales-entry-table .entry-action{width:12%}
+.sales-editor .sales-entry-table thead{display:table-header-group!important}
+.sales-editor .sales-entry-table tbody{display:table-row-group!important}
+.sales-editor .sales-entry-table tr{display:table-row!important;background:transparent!important;border:0!important;padding:0!important}
+.sales-editor .sales-entry-table th,.sales-editor .sales-entry-table td{display:table-cell!important;padding:4px!important;border-bottom:1px solid var(--line)!important;vertical-align:middle;font-size:11px!important;white-space:normal!important;text-align:left!important}
+.sales-editor .sales-entry-table th{background:#edf5f0;color:#176345;font-weight:700}
+.sales-editor .sales-entry-table td:before{display:none!important}
+.sales-editor .sales-entry-table input{width:100%!important;min-width:0!important;height:34px!important;padding:3px 5px!important;margin:0!important;font-size:13px!important;border-radius:4px!important}
+.sales-editor .sales-entry-table input[readonly]{background:#f1f6f3;color:#176345;font-weight:700}
+.sales-editor .sales-entry-table td:nth-child(3) input,.sales-editor .sales-entry-table td:nth-child(4) input{text-align:right}
+.entry-quantity{display:flex;align-items:center;min-width:0}
+.sales-editor .entry-quantity input{text-align:center;padding:3px 0!important;border-radius:0!important}
+.sales-editor .entry-quantity button{flex:none;width:28px;height:34px;border:1px solid #d6e3db;background:#edf5f0;color:#176345;padding:0;font-size:18px;cursor:pointer}
+.sales-editor .entry-quantity button:disabled{opacity:.4;cursor:default}
+.entry-actions{display:flex;align-items:center;justify-content:center;gap:3px}
+.sales-editor .entry-actions button{display:flex!important;align-items:center;justify-content:center;width:30px!important;height:34px!important;min-height:0!important;padding:0!important;margin:0!important;flex:none;border-radius:4px}
+@media(max-width:700px){
+ .modal.sales-editor-modal{padding:8px!important}
+ .modal.sales-editor-modal>.sales-editor{padding:16px 8px!important;height:calc(var(--sales-layout-height,100svh) - 16px)!important}
+ .sales-editor .sales-entry-table th,.sales-editor .sales-entry-table td{padding:3px 1px!important;font-size:10px!important}
+ .sales-editor .sales-entry-table th:not(:first-child){text-align:center!important}
+ .sales-entry-table .entry-item{width:33%}.sales-entry-table .entry-qty{width:9%}.sales-entry-table .entry-rate{width:18%}.sales-entry-table .entry-amount{width:22%}.sales-entry-table .entry-action{width:18%}
+ /* Keep 16px inputs to avoid iOS keyboard focus zoom; reduce their height and padding. */
+ .sales-editor .sales-entry-table input{height:32px!important;min-height:0!important;font-size:16px!important;padding:3px 1px!important;letter-spacing:-.6px}
+ .sales-editor .entry-quantity{display:block}
+ .sales-editor .entry-quantity button{display:none!important}
+ .sales-editor .entry-quantity input{padding:3px 0!important;border-radius:4px!important}
+ .sales-editor .entry-actions{flex-direction:row;gap:2px}
+ .sales-editor .entry-actions button{width:calc((100% - 2px)/2)!important;height:32px!important}
+}

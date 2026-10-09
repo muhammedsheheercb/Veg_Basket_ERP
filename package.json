@@ -14,7 +14,8 @@
     "db:migrate-business-settings": "node --env-file=.env scripts/migrate-business-settings.mjs",
     "db:migrate-opening-balance-payments": "node --env-file=.env scripts/migrate-opening-balance-payments.mjs",
     "db:migrate-price-lists": "node --env-file=.env scripts/migrate-price-lists.mjs",
-    "db:migrate-sales-manual-items": "node --env-file=.env scripts/migrate-sales-manual-items.mjs"
+    "db:migrate-sales-manual-items": "node --env-file=.env scripts/migrate-sales-manual-items.mjs",
+    "db:migrate-sales-rate-precision": "node --env-file=.env scripts/migrate-sales-rate-precision.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",

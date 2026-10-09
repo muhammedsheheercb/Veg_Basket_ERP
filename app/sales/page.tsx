@@ -32,13 +32,13 @@ type Business = { address: string; contactNumber: string; email: string };
 
 const today = new Date().toISOString().slice(0, 10);
 const money = (n: number | string) =>
-  `AED ${Number(n).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  `AED ${Number(n).toLocaleString('en-AE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`;
 
-const blank = (): L => ({ itemName: '', itemId: '', quantity: '1', unit: '', unitPrice: '0.00', lineTotal: '0.00' });
+const blank = (): L => ({ itemName: '', itemId: '', quantity: '1', unit: '', unitPrice: '0.0', lineTotal: '0.000' });
 
 const cent = (x: string | number) => {
   const [a, b = ''] = String(x || '0').split('.');
-  return (Number(a) || 0) * 100 + Number((b + '00').slice(0, 2));
+  return (Number(a) || 0) * 1000 + Number((b + '000').slice(0, 3));
 };
 
 export default function Sales() {
@@ -213,7 +213,7 @@ export default function Sales() {
         s.items.map((x: any) => ({
           itemId: x.itemId || '',
           itemName: x.itemName.toUpperCase(),
-          quantity: x.unit ? `${Number(x.quantity)} ${x.unit}` : String(x.quantity),
+          quantity: String(Math.max(1, Number(x.quantity))),
           unit: x.unit || '',
           unitPrice: String(x.unitPrice),
           lineTotal: String(x.lineTotal)
@@ -226,12 +226,14 @@ export default function Sales() {
     }
   };
 
-  const changeQty = (i: number, q: string) => {
-    setLines(arr => arr.map((x, n) => (n === i ? { ...x, quantity: q } : x)));
-  };
-
-  const changeAmount = (i: number, a: string) => {
-    setLines(arr => arr.map((x, n) => (n === i ? { ...x, lineTotal: a } : x)));
+  const changeNumber = (i: number, field: 'quantity' | 'unitPrice', value: string) => {
+    if (!/^\d*(?:\.\d{0,3})?$/.test(value)) return;
+    if (field === 'quantity' && value !== '' && Number(value) < 1) return;
+    setLines(arr => arr.map((x, n) => {
+      if (n !== i) return x;
+      const updated = { ...x, [field]: value };
+      return { ...updated, lineTotal: (Math.round(Number(updated.quantity || 1) * cent(updated.unitPrice)) / 1000).toFixed(3) };
+    }));
   };
 
   const changeItem = (i: number, input: HTMLInputElement) => {
@@ -250,6 +252,7 @@ export default function Sales() {
 
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!lines.length) { setError('Add at least one invoice item.'); return; }
     setBusy(true);
     setError('');
     const d = new FormData(e.currentTarget);
@@ -442,62 +445,41 @@ export default function Sales() {
               <div className="sale-lines">
                 <div className="sale-lines-head">
                   <b>Invoice items</b>
-                  <button type="button" className="outline" onClick={() => setLines(x => [...x, blank()])}>
+                  <button type="button" className="outline" onClick={() => nextItem(lines.length - 1)}>
                     <Plus size={15} /> Add item
                   </button>
                 </div>
-                {lines.map((x, i) => (
-                  <div className="sale-line" key={i}>
-                    <label>Item name
-                      <input ref={node => { nameRefs.current[i] = node; }} type="text" required maxLength={250}
-                        autoCapitalize="characters" spellCheck={false} placeholder="Enter item name" value={x.itemName} onChange={e => changeItem(i, e.currentTarget)} />
-                    </label>
-                    <label>
-                      Qty
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. 10 or 10box"
-                        value={x.quantity}
-                        onChange={e => changeQty(i, e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Amount (AED)
-                      <input
-                        type="number"
-                        min="0"
-                        step=".01"
-                        required
-                        placeholder="0.00"
-                        value={x.lineTotal}
-                        onChange={e => changeAmount(i, e.target.value)}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className="line-remove danger"
-                      data-delete-confirmation-ignore="true"
-                      aria-label="Remove invoice item"
-                      title="Remove invoice item"
-                      disabled={lines.length === 1}
-                      onClick={() => setLines(a => a.filter((_, n) => n !== i))}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                    <button type="button" className="outline line-next" title="Next Item (→)" aria-label="Next Item (→)" onClick={() => nextItem(i)}><ArrowRight size={18} /></button>
-                  </div>
-                ))}
+                <table className="sales-entry-table">
+                  <colgroup><col className="entry-item" /><col className="entry-qty" /><col className="entry-rate" /><col className="entry-amount" /><col className="entry-action" /></colgroup>
+                  <thead><tr><th scope="col">Item</th><th scope="col">Qty</th><th scope="col">Rate</th><th scope="col">Amount</th><th scope="col">Action</th></tr></thead>
+                  <tbody>{lines.map((x, i) => (
+                    <tr className="sale-line" key={i}>
+                      <td><input aria-label={`Item name ${i + 1}`} ref={node => { nameRefs.current[i] = node; }} type="text" required maxLength={250}
+                        autoCapitalize="characters" spellCheck={false} placeholder="Enter item name" value={x.itemName} onChange={e => changeItem(i, e.currentTarget)} /></td>
+                      <td><div className="entry-quantity">
+                        <button type="button" aria-label={`Decrease quantity ${i + 1}`} disabled={Number(x.quantity || 1) <= 1} onClick={() => changeNumber(i, 'quantity', String(Math.max(1, Number(x.quantity || 1) - 1)))}>−</button>
+                        <input aria-label={`Quantity ${i + 1}`} type="text" inputMode="decimal" required pattern="[0-9]+(\.[0-9]{1,3})?" value={x.quantity} onChange={e => changeNumber(i, 'quantity', e.target.value)} onBlur={() => { if (!x.quantity) changeNumber(i, 'quantity', '1'); }} />
+                        <button type="button" aria-label={`Increase quantity ${i + 1}`} onClick={() => changeNumber(i, 'quantity', String(Number(x.quantity || 1) + 1))}>+</button>
+                      </div></td>
+                      <td><input aria-label={`Rate ${i + 1}`} type="text" inputMode="decimal" required pattern="[0-9]+(\.[0-9]{1,3})?" value={x.unitPrice} onChange={e => changeNumber(i, 'unitPrice', e.target.value)} onFocus={e => e.currentTarget.select()} onClick={e => e.currentTarget.select()} /></td>
+                      <td><input aria-label={`Amount ${i + 1}`} readOnly value={x.lineTotal} tabIndex={-1} /></td>
+                      <td><div className="entry-actions">
+                        <button type="button" className="line-remove danger" data-delete-confirmation-ignore="true" aria-label="Remove invoice item" title="Remove invoice item" onClick={() => setLines(a => a.filter((_, n) => n !== i))}><Trash2 size={14} /></button>
+                        <button type="button" className="outline line-next" title="Next Item (→)" aria-label="Next Item (→)" onClick={() => nextItem(i)}><ArrowRight size={14} /></button>
+                      </div></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
               </div>
 
               <div className="sale-form-grid">
                 <label>
                   Discount (AED)
-                  <input name="discount" type="number" min="0" step=".01" max={subtotal / 100} value={discount} onChange={e => setDiscount(e.target.value)} />
+                  <input name="discount" type="number" min="0" step=".01" max={subtotal / 1000} value={discount} onChange={e => setDiscount(e.target.value)} />
                 </label>
                 <label>
                   Paid amount (AED)
-                  <input name="paid" type="number" min="0" step=".01" max={Math.max(0, subtotal - cent(discount)) / 100} value={paid} onChange={e => setPaid(e.target.value)} />
+                  <input name="paid" type="number" min="0" step=".01" max={Math.max(0, subtotal - cent(discount)) / 1000} value={paid} onChange={e => setPaid(e.target.value)} />
                 </label>
                 <label>
                   Payment method
@@ -571,7 +553,7 @@ function Totals({ subtotal, discount, paid }: { subtotal: number; discount: stri
       ].map(([a, b]) => (
         <span key={String(a)}>
           {a}
-          <b>{money(Number(b) / 100)}</b>
+          <b>{money(Number(b) / 1000)}</b>
         </span>
       ))}
     </div>
@@ -587,7 +569,7 @@ function Table({ sale }: { sale: S }) {
             <th className="item-index">#</th>
             <th>Item Description</th>
             <th className="num">Qty</th>
-            <th className="num">Total (AED)</th>
+            <th className="num">Rate (AED)</th><th className="num">Total (AED)</th>
           </tr>
         </thead>
         <tbody>
@@ -600,7 +582,7 @@ function Table({ sale }: { sale: S }) {
               <td data-label="Qty" className="num">
                 {Number(x.quantity)} {x.unit || ''}
               </td>
-              <td data-label="Total (AED)" className="num">{Number(x.lineTotal).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td data-label="Rate (AED)" className="num">{Number(x.unitPrice).toFixed(3)}</td><td data-label="Total (AED)" className="num">{Number(x.lineTotal).toLocaleString('en-AE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
             </tr>
           ))}
         </tbody>

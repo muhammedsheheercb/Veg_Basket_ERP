@@ -47,6 +47,68 @@ try {
     };
     await names.nth(0).fill('tomato');
     assert.equal(await names.nth(0).inputValue(), 'TOMATO');
+    assert.equal(await panel.locator('table').evaluate(el => getComputedStyle(el).display), 'table');
+    assert.equal(await panel.locator('thead').isVisible(), true);
+    const first = lines.nth(0);
+    const rate = first.getByRole('textbox', { name: 'Rate 1', exact: true });
+    const amount = first.getByRole('textbox', { name: 'Amount 1', exact: true });
+    assert.equal(await rate.inputValue(), '0.0');
+    await rate.click();
+    assert.deepEqual(await rate.evaluate(input => [input.selectionStart, input.selectionEnd]), [0, 3]);
+    await page.keyboard.press('Backspace');
+    assert.equal(await rate.inputValue(), '');
+    assert.equal(await amount.inputValue(), '0.000');
+    await names.nth(0).click();
+    assert.equal(await rate.inputValue(), '', 'Blur must not restore zeros.');
+    for (const value of ['25.5', '25.75', '25.125']) {
+      await rate.click();
+      await page.keyboard.type(value);
+      assert.equal(await rate.inputValue(), value);
+      assert.equal(await amount.inputValue(), Number(value).toFixed(3));
+      await names.nth(0).click();
+      assert.equal(await rate.inputValue(), value, 'Blur must preserve the entered precision.');
+    }
+    await rate.click();
+    assert.deepEqual(await rate.evaluate(input => [input.selectionStart, input.selectionEnd]), [0, 6]);
+    await page.keyboard.type('40.125');
+    await page.keyboard.type('4');
+    assert.equal(await rate.inputValue(), '40.125', 'Rates remain limited to three decimal places.');
+    const increase = first.locator('.entry-quantity button').last();
+    const decrease = first.locator('.entry-quantity button').first();
+    assert.equal(await increase.isVisible(), !mobile);
+    assert.equal(await decrease.isVisible(), !mobile);
+    if (mobile) {
+      await first.getByRole('textbox', { name: 'Quantity 1', exact: true }).fill('2');
+    } else {
+      await increase.click();
+    }
+    assert.equal(await first.getByRole('textbox', { name: 'Amount 1', exact: true }).inputValue(), '80.250');
+    if (mobile) {
+      await first.getByRole('textbox', { name: 'Quantity 1', exact: true }).fill('1');
+      const layout = await first.evaluate(row => {
+        const cells = Array.from(row.cells).map(cell => cell.getBoundingClientRect());
+        const heads = Array.from(row.closest('table').querySelectorAll('th')).map(cell => cell.getBoundingClientRect());
+        const inputs = Array.from(row.querySelectorAll('input')).map(input => input.getBoundingClientRect());
+        const buttons = Array.from(row.querySelectorAll('.entry-actions button')).map(button => button.getBoundingClientRect());
+        return { aligned: cells.every((cell, i) => Math.abs(cell.left - heads[i].left) < 1 && Math.abs(cell.width - heads[i].width) < 1),
+          sameInputTop: inputs.every(input => Math.abs(input.top - inputs[0].top) < 1),
+          itemWider: cells[0].width > cells[1].width && cells[0].width > cells[2].width,
+          actionsInline: Math.abs(buttons[0].top - buttons[1].top) < 1 && buttons[0].right <= buttons[1].left,
+          height: row.getBoundingClientRect().height };
+      });
+      assert.equal(layout.aligned, true);
+      assert.equal(layout.sameInputTop, true);
+      assert.equal(layout.itemWider, true);
+      assert.equal(layout.actionsInline, true);
+      assert.ok(layout.height <= 40, 'Mobile rows must remain compact: ' + JSON.stringify(layout));
+    } else {
+      await decrease.click();
+      assert.equal(await decrease.isDisabled(), true);
+    }
+    for (const value of ['0', '-1', 'abc']) {
+      await first.getByRole('textbox', { name: 'Quantity 1', exact: true }).fill(value);
+      assert.equal(await first.getByRole('textbox', { name: 'Quantity 1', exact: true }).inputValue(), '1');
+    }
     await names.nth(0).fill('fresh onion');
     assert.equal(await names.nth(0).inputValue(), 'FRESH ONION');
     await names.nth(0).fill('green chilli');
@@ -55,8 +117,8 @@ try {
     await page.keyboard.type('fresh ');
     assert.equal(await names.nth(0).inputValue(), 'GREEN FRESH CHILLI');
     assert.equal(await names.nth(0).evaluate(input => input.selectionStart), 12);
-    await lines.nth(0).getByRole('textbox').nth(1).fill('2box');
-    await lines.nth(0).getByRole('spinbutton').fill('12.50');
+    await lines.nth(0).getByRole('textbox', { name: 'Quantity 1', exact: true }).fill('2');
+    await lines.nth(0).getByRole('textbox', { name: 'Rate 1', exact: true }).fill('6.250');
     // Already-visible desktop insertion should preserve scroll position.
     const before = await editor.evaluate(el => el.scrollTop);
     await lines.nth(0).getByRole('button', { name: 'Next Item (→)', exact: true }).click();
@@ -120,13 +182,13 @@ try {
       });
       assert.deepEqual(afterTyping, beforeTyping, 'Typing should not reflow the field.');
     }
-    assert.equal(await lines.nth(0).getByRole('textbox').nth(1).inputValue(), '2box');
-    assert.equal(await lines.nth(0).getByRole('spinbutton').inputValue(), '12.50');
+    assert.equal(await lines.nth(0).getByRole('textbox', { name: 'Quantity 1', exact: true }).inputValue(), '2');
+    assert.equal(await lines.nth(0).getByRole('textbox', { name: 'Rate 1', exact: true }).inputValue(), '6.250');
     assert.match(await editor.locator('.sale-totals').innerText(), /AED 12.50/);
     assert.equal(sawAnimatedScroll, true, 'Offscreen rows must scroll through intermediate positions.');
     // Draft item deletion must bypass global confirmation and preserve the bill.
     await names.nth(1).fill('remove this item');
-    await lines.nth(1).getByRole('spinbutton').fill('10.00');
+    await lines.nth(1).getByRole('textbox', { name: 'Rate 2', exact: true }).fill('10.000');
     await editor.locator('[name="discount"]').fill('2.50');
     await editor.locator('[name="paid"]').fill('5.00');
     await editor.locator('[name="notes"]').fill('Keep these notes');
@@ -151,7 +213,7 @@ try {
     page.off('request', recordWrite);
     assert.deepEqual(await lines.evaluateAll(rows => rows.map(row => Array.from(row.querySelectorAll('input')).map(input => input.value))), remaining);
     assert.deepEqual(await editor.locator('[name]').evaluateAll(fields => fields.map(field => [field.name, field.value])), billFields);
-    assert.equal(await editor.evaluate(el => el.scrollTop), scrollBeforeDelete, 'Deleting an item must not jump the form.');
+    assert.equal(await editor.evaluate(el => el.scrollTop), Math.min(scrollBeforeDelete, await editor.evaluate(el => el.scrollHeight - el.clientHeight)), 'Deleting preserves scroll unless the shorter content clamps it.');
     const totals = await editor.locator('.sale-totals span').allTextContents();
     assert.match(totals[0], /AED 12.50/);
     assert.match(totals[1], /AED 2.50/);
