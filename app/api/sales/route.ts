@@ -8,17 +8,19 @@ const cents = (v: any) => {
   const s = String(v ?? '');
   if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
   const [a, b = ''] = s.split('.');
-  return +a * 100 + +(b + '00').slice(0, 2);
+  const amount = +a * 100 + +(b + '00').slice(0, 2);
+  return Number.isSafeInteger(amount) && amount < 100000000000000 ? amount : null;
 };
 const valid = (x: string) => /^[0-9a-f-]{36}$/i.test(x);
 
 function parseLine(x: any) {
   const itemId = String(x.itemId || '');
-  if (!valid(itemId)) return null;
+  const itemName = String(x.itemName || '').trim().toUpperCase();
+  if (!itemName || itemName.length > 250 || (itemId && !valid(itemId))) return null;
   const rawQty = String(x.quantity ?? '').trim();
-  const match = rawQty.match(/^([\d.]+)\s*(.*)$/);
+  const match = rawQty.match(/^(\d+(?:\.\d{1,3})?)\s*([^\d.].*)?$/);
   const numQty = match ? parseFloat(match[1]) : 0;
-  if (!numQty || numQty <= 0) return null;
+  if (!Number.isFinite(numQty) || numQty <= 0 || numQty >= 100000000000) return null;
 
   const unitStr = (match && match[2] ? match[2].trim() : (x.unit ? String(x.unit).trim() : '')) || null;
   let totalCents = cents(x.lineTotal);
@@ -31,9 +33,12 @@ function parseLine(x: any) {
   }
 
   if (totalCents === null || priceCents === null) return null;
+  priceCents = Math.round(totalCents / numQty);
+  if (priceCents >= 100000000000000) return null;
 
   return {
-    itemId,
+    itemId: itemId || null,
+    itemName,
     quantity: Math.round(numQty * 1000),
     unit: unitStr,
     unitPrice: priceCents,
@@ -81,9 +86,11 @@ export async function POST(r: Request) {
         paymentMethod: v.method,
         notes: v.notes
       }).returning();
-      await tx.insert(saleItems).values(v.lines.map(x => ({
+      await tx.insert(saleItems).values(v.lines.map((x, position) => ({
         saleId: row.id,
         itemId: x.itemId,
+        itemName: x.itemName,
+        position,
         quantity: (x.quantity / 1000).toFixed(3),
         unit: x.unit || null,
         unitPrice: (x.unitPrice / 100).toFixed(2),

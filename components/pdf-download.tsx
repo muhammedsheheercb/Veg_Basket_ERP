@@ -1,4 +1,3 @@
-'use client';
 
 import { Document, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer';
 
@@ -15,7 +14,7 @@ const s=StyleSheet.create({
   section:{color:'#164e3b',fontFamily:'Helvetica-Bold',fontSize:8.5,marginBottom:6,textTransform:'uppercase'},table:{borderWidth:1,borderColor:'#cbd7d0'},row:{flexDirection:'row',borderBottomWidth:1,borderBottomColor:'#dce5e0',minHeight:23,alignItems:'stretch'},headRow:{backgroundColor:'#1d6b4f',minHeight:24},cell:{padding:5,flex:1,lineHeight:1.3},head:{color:'#fff',fontFamily:'Helvetica-Bold',fontSize:7},desc:{flex:2.25},index:{flex:.45,textAlign:'center'},qty:{flex:.8,textAlign:'right'},amount:{flex:1,textAlign:'right'},date:{flex:.85},type:{flex:.95},reference:{flex:1},statementDesc:{flex:1.75},status:{flex:1.1},
   bottom:{flexDirection:'row',justifyContent:'flex-end',marginTop:14},totals:{width:235,borderWidth:1,borderColor:'#cbd7d0'},totalRow:{flexDirection:'row',justifyContent:'space-between',padding:7,borderBottomWidth:1,borderBottomColor:'#dce5e0'},totalStrong:{backgroundColor:'#dcefe3',padding:9},totalLabel:{fontSize:8},totalValue:{fontFamily:'Helvetica-Bold',textAlign:'right'},notes:{marginTop:14,padding:8,borderWidth:1,borderColor:'#d6dfda',color:'#52616b',lineHeight:1.4},footer:{position:'absolute',bottom:18,left:34,right:34,borderTopWidth:1,borderTopColor:'#d6dfda',paddingTop:6,color:'#718078',fontSize:6.5,textAlign:'center'}
 });
-function Doc({data}:{data:PdfData}) {
+export function Doc({data}:{data:PdfData}) {
  const invoice=data.kind==='Sales Invoice'||data.kind==='Purchase Bill'||data.kind==='Price List'||data.kind==='Invoice';
  const statement=data.kind==='Supplier Statement'||data.kind==='Customer Statement';
  const statementHasReference=data.headers.includes('Reference');
@@ -41,3 +40,5 @@ function extract(el:HTMLElement):PdfData {
 }
 export async function downloadPdfFromElement(element:HTMLElement,filename:string){const blob=await pdf(<Doc data={extract(element)}/>).toBlob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename.replace(/[^a-z0-9._-]+/gi,'-');a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 export async function downloadPdf(data: PdfData, filename: string) { const blob = await pdf(<Doc data={data} />).toBlob(), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename.replace(/[^a-z0-9._-]+/gi, '-'); a.style.display = 'none'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
+
+export async function createPdfBlob(data: PdfData) { return pdf(<Doc data={data} />).toBlob(); }

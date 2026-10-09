@@ -21,6 +21,10 @@ export async function proxy(request: NextRequest) {
   if (isLogin && limited(request, 5, 15 * 60_000)) return NextResponse.json({ error: 'Too many sign-in attempts. Please try again in 15 minutes.' }, { status: 429, headers: { 'Retry-After': '900' } });
   if (pathname.startsWith('/api/') && write && !pathname.startsWith('/api/auth/') && limited(request, 120, 60_000)) return NextResponse.json({ error: 'Too many requests. Please wait a moment and try again.' }, { status: 429, headers: { 'Retry-After': '60' } });
   if (pathname.startsWith('/api/auth/')) return NextResponse.next();
+  if (request.method === 'GET' && /^\/api\/shared-invoices\/[^/]+$/.test(pathname)) {
+    if (limited(request, 30, 60_000)) return NextResponse.json({ error: 'Please try again shortly.' }, { status: 429 });
+    return NextResponse.next();
+  }
   const session = await hasValidSession(request.cookies.get(SESSION_COOKIE)?.value);
   if (session) return NextResponse.next();
   if (pathname.startsWith('/api/')) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });

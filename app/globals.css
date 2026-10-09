@@ -1706,3 +1706,38 @@ button:not(:disabled),a[href]{-webkit-tap-highlight-color:transparent;touch-acti
   .sale-line>.price-list-item-field{grid-column:1/-1}
   .sale-line>.line-remove{margin-top:0}
 }
+
+.sale-line{grid-template-columns:minmax(150px,1.8fr) 130px 120px 36px 40px}
+.sale-line>.line-next{height:38px;padding:8px;align-self:end;margin-top:17px}
+@media(max-width:700px){
+  .sale-line{grid-template-columns:1fr 1fr}
+  .sale-line>.line-remove{grid-column:1;justify-self:start}
+  .sale-line>.line-next{grid-column:2;justify-self:end;width:40px;margin-top:0}
+}
+
+/* Keep the Sales editor within the visible viewport, including the OS keyboard. */
+.modal.sales-editor-modal{
+  top:var(--sales-viewport-top,0px)!important;
+  bottom:auto!important;
+  height:var(--sales-viewport-height,100dvh)!important;
+  padding:12px!important;
+  align-items:center!important;
+  overflow:hidden!important;
+  z-index:150!important;
+}
+.modal.sales-editor-modal>.sales-editor{
+  max-height:100%!important;
+  margin:0!important;
+  min-height:0;
+  overscroll-behavior:contain;
+  scroll-behavior:auto;
+  scroll-padding-block:12px 64px;
+}
+@media(max-width:700px){
+  .modal.sales-editor-modal{
+    padding-bottom:calc(12px + env(safe-area-inset-bottom))!important;
+  }
+  .sales-editor .sale-line label:first-child input{
+    font-size:16px;
+  }
+}

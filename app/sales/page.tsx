@@ -1,12 +1,16 @@
 'use client';
 import { useEffect, useRef, useState, FormEvent } from 'react';
 import Image from 'next/image';
-import { CheckCircle2, Download, Eye, FileText, Leaf, Mail, MapPin, Pencil, Phone, Plus, Trash2, WalletCards, X } from 'lucide-react';
+import { flushSync } from 'react-dom';
+import { cancelSalesInputScroll, revealSalesInput } from '@/lib/sales-editor-focus';
+import { ArrowRight, MessageCircle, CheckCircle2, Download, Eye, FileText, Leaf, Mail, MapPin, Pencil, Phone, Plus, Trash2, WalletCards, X } from 'lucide-react';
 import { ListFilters, ListPagination, useListControls } from '@/components/list-controls';
-import { downloadPdf, downloadPdfFromElement } from '@/components/pdf-download';
-import { FormSearchableSelect, SearchableSelect } from '@/components/price-list-item-picker';
+import { createPdfBlob, downloadPdf, downloadPdfFromElement } from '@/components/pdf-download';
+import { SearchableSelect } from '@/components/price-list-item-picker';
 
-type L = { itemId: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
+import { salesPdfData } from '@/lib/sales-pdf';
+
+type L = { itemName: string; itemId: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
 type R = { id: string; invoice: string; customer: string; date: string; total: string; paid: string };
 type S = {
   id: string;
@@ -30,7 +34,7 @@ const today = new Date().toISOString().slice(0, 10);
 const money = (n: number | string) =>
   `AED ${Number(n).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const blank = (): L => ({ itemId: '', quantity: '1', unit: '', unitPrice: '0.00', lineTotal: '0.00' });
+const blank = (): L => ({ itemName: '', itemId: '', quantity: '1', unit: '', unitPrice: '0.00', lineTotal: '0.00' });
 
 const cent = (x: string | number) => {
   const [a, b = ''] = String(x || '0').split('.');
@@ -40,7 +44,15 @@ const cent = (x: string | number) => {
 export default function Sales() {
   const [rows, setRows] = useState<R[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
-  const [items, setItems] = useState<any[]>([]);
+  const [customerId, setCustomerId] = useState('');
+  const [pending, setPending] = useState<string | null>(null);
+  const [ledgerError, setLedgerError] = useState('');
+  const nameRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const editorRef = useRef<HTMLElement | null>(null);
+  const editorModalRef = useRef<HTMLDivElement | null>(null);
+  const [share, setShare] = useState<{ file: File; message: string; phone: string; path: string } | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [shareError, setShareError] = useState('');
   const [form, setForm] = useState<S | null | undefined>();
   const [lines, setLines] = useState<L[]>([blank()]);
   const [discount, setDiscount] = useState('0.00');
@@ -53,7 +65,7 @@ export default function Sales() {
   const load = () => {
     fetch('/api/sales').then(r => r.json()).then(setRows);
     fetch('/api/customers').then(r => r.json()).then(setCustomers);
-    fetch('/api/items?all=1').then(r => r.json()).then(setItems);
+
   };
   useEffect(load, []);
 
@@ -69,25 +81,103 @@ export default function Sales() {
   };
 
   const downloadSale = async (sale: S) => {
-    const balance = Number(sale.total) - Number(sale.paid);
-    const business = await fetch('/api/business-settings').then(r => r.ok ? r.json() : null).catch(() => null);
-    await downloadPdf({
-      kind: 'Sales Invoice', title: sale.invoiceNumber, party: sale.customerName,
-      business: [business?.address, business?.contactNumber, business?.email].filter(Boolean),
-      sales: { date: sale.saleDate, status: balance <= 0 ? 'Paid' : Number(sale.paid) > 0 ? 'Partial' : 'Unpaid', method: sale.paymentMethod || '—', contact: sale.customerMobile || '', address: sale.customerAddress || '' },
-      summary: [['Subtotal', money(sale.subtotal)], ['Discount', money(sale.discount)], ['Grand Total', money(sale.total)], ['Paid Amount', money(sale.paid)], ['Balance Amount', money(balance)]],
-      headers: ['#', 'Item Description', 'Qty', 'Total (AED)'],
-      rows: sale.items.map((item, index) => [String(index + 1), `${item.itemCode} · ${item.itemName}`, `${Number(item.quantity)} ${item.unit || ''}`.trim(), Number(item.lineTotal).toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
-      notes: sale.notes
-    }, `${sale.invoiceNumber}.pdf`);
+    const business = await fetch('/api/business-settings').then(r => r.ok ? r.json() : null);
+    await downloadPdf(salesPdfData(sale, business), `${sale.invoiceNumber}.pdf`);
   };
+
+  useEffect(() => {
+    setPending(null); setLedgerError('');
+    if (!customerId || form === undefined) return;
+    const controller = new AbortController();
+    fetch('/api/customers/' + customerId, { signal: controller.signal, cache: 'no-store' })
+      .then(async r => { if (!r.ok) throw new Error(); return r.json(); })
+      .then(data => setPending(String(data.summary.outstanding)))
+      .catch(e => { if (e.name !== 'AbortError') setLedgerError('Unable to load customer balance. Reselect the customer to retry.'); });
+    return () => controller.abort();
+  }, [customerId, form]);
+
+  useEffect(() => {
+    if (form === undefined) return;
+    const editor = editorRef.current;
+    const modal = editorModalRef.current;
+    if (!editor || !modal) return;
+    const viewport = window.visualViewport;
+    let frame = 0;
+    const update = () => {
+      modal.style.setProperty('--sales-viewport-top', `${viewport?.offsetTop || 0}px`);
+      modal.style.setProperty('--sales-viewport-height', `${viewport?.height || window.innerHeight}px`);
+      const input = document.activeElement;
+      if (input instanceof HTMLInputElement && editor.contains(input)) {
+        revealSalesInput(editor, input);
+      }
+    };
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    update();
+    viewport?.addEventListener('resize', schedule);
+    viewport?.addEventListener('scroll', schedule);
+    window.addEventListener('resize', schedule);
+    editor.addEventListener('focusin', schedule);
+    const observer = new ResizeObserver(schedule);
+    observer.observe(editor);
+    return () => {
+      cancelAnimationFrame(frame);
+      cancelSalesInputScroll(editor);
+      observer.disconnect();
+      viewport?.removeEventListener('resize', schedule);
+      viewport?.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      editor.removeEventListener('focusin', schedule);
+    };
+  }, [form]);
+
+  function nextItem(index: number) {
+    // Commit and focus within the click gesture so mobile browsers open/retain
+    // the keyboard. Delayed effect-based focus can lose that user activation.
+    flushSync(() => {
+      setLines(current => [...current.slice(0, index + 1), blank(), ...current.slice(index + 1)]);
+    });
+    const input = nameRefs.current[index + 1];
+    const editor = editorRef.current;
+    if (input && editor) {
+      input.focus({ preventScroll: true });
+      revealSalesInput(editor, input, true);
+    }
+  }
+
+  async function prepareShare(sale: S) {
+    setSharing(true); setShareError(''); setShare(null);
+    try {
+      let phone = (sale.customerMobile || '').replace(/[\s()+-]/g, '').replace(/^00/, '');
+      if (/^05\d{8}$/.test(phone)) phone = '971' + phone.slice(1);
+      if (!/^[1-9]\d{7,14}$/.test(phone)) throw new Error('Update the customer WhatsApp number with its country code before sharing.');
+      const businessResponse = await fetch('/api/business-settings');
+      if (!businessResponse.ok) throw new Error('Unable to load business settings.');
+      const blob = await createPdfBlob(salesPdfData(sale, await businessResponse.json()));
+      const response = await fetch('/api/sales/' + sale.id + '/share', { method: 'POST' });
+      if (!response.ok) throw new Error('Unable to prepare secure invoice link.');
+      const { path } = await response.json();
+      setShare({ file: new File([blob], sale.invoiceNumber + '.pdf', { type: 'application/pdf' }), phone, path,
+        message: `Dear ${sale.customerName}, please find invoice ${sale.invoiceNumber} from Veg Basket for ${money(sale.total)}. Thank you for your business.` });
+    } catch (e) { setShareError(e instanceof Error ? e.message : 'Unable to prepare invoice.'); }
+    finally { setSharing(false); }
+  }
+
+  async function nativeShare() {
+    if (!share) return;
+    try { await navigator.share({ files: [share.file], title: 'Veg Basket invoice', text: share.message }); }
+    catch (e) { if (!(e instanceof Error && e.name === 'AbortError')) setShareError('File sharing was unavailable. Use the WhatsApp link below.'); }
+  }
 
   const edit = async (r: R) => {
     const s = await get(r.id);
     if (s) {
       setLines(
         s.items.map((x: any) => ({
-          itemId: x.itemId,
+          itemId: x.itemId || '',
+          itemName: x.itemName.toUpperCase(),
           quantity: x.unit ? `${Number(x.quantity)} ${x.unit}` : String(x.quantity),
           unit: x.unit || '',
           unitPrice: String(x.unitPrice),
@@ -96,6 +186,7 @@ export default function Sales() {
       );
       setDiscount(String(s.discount || '0.00'));
       setPaid(String(s.paid || '0.00'));
+      setCustomerId(s.customerId);
       setForm(s);
     }
   };
@@ -108,8 +199,16 @@ export default function Sales() {
     setLines(arr => arr.map((x, n) => (n === i ? { ...x, lineTotal: a } : x)));
   };
 
-  const changeItem = (i: number, itemId: string) => {
-    setLines(arr => arr.map((x, n) => (n === i ? { ...x, itemId } : x)));
+  const changeItem = (i: number, input: HTMLInputElement) => {
+    const value = input.value;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    flushSync(() => {
+      setLines(arr => arr.map((x, n) => (n === i ? { ...x, itemId: '', itemName: value.toUpperCase() } : x)));
+    });
+    if (start !== null && end !== null) {
+      input.setSelectionRange(value.slice(0, start).toUpperCase().length, value.slice(0, end).toUpperCase().length);
+    }
   };
 
   const subtotal = lines.reduce((n, x) => n + cent(x.lineTotal), 0);
@@ -119,6 +218,7 @@ export default function Sales() {
     setBusy(true);
     setError('');
     const d = new FormData(e.currentTarget);
+    try {
     const r = await fetch(form?.id ? '/api/sales/' + form.id : '/api/sales', {
       method: form?.id ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -137,6 +237,8 @@ export default function Sales() {
       setForm(undefined);
       load();
     } else setError((await r.json()).error);
+    } catch { setError('Unable to save sale. Please check your connection and try again.'); }
+    finally { setBusy(false); }
   }
 
   async function del() {
@@ -164,6 +266,7 @@ export default function Sales() {
             setLines([blank()]);
             setDiscount('0.00');
             setPaid('0.00');
+            setCustomerId(''); setError('');
             setForm(null);
           }}
         >
@@ -192,6 +295,7 @@ export default function Sales() {
               <span>{money(r.total)}</span>
               <b className="payable">{money(+r.total - +r.paid)}</b>
               <span className="row-actions">
+                <button title="Send via WhatsApp" disabled={sharing} onClick={async () => { const sale = await get(r.id); if (sale) await prepareShare(sale); }}><MessageCircle size={16} /></button>
                 <button title="View" onClick={async () => setDetail(await get(r.id))}>
                   <Eye size={16} />
                 </button>
@@ -241,6 +345,7 @@ export default function Sales() {
                 </div>
 
                 <div className="erp-mobile-card-actions">
+                  <button title="Send via WhatsApp" disabled={sharing} onClick={async () => { const sale = await get(r.id); if (sale) await prepareShare(sale); }}><MessageCircle size={16} /></button>
                   <button title="View Details" onClick={async () => setDetail(await get(r.id))}>
                     <Eye size={16} /> <span>View</span>
                   </button>
@@ -266,23 +371,27 @@ export default function Sales() {
       </section>
 
       {form !== undefined && (
-        <div className="modal">
+        <div className="modal sales-editor-modal" ref={editorModalRef}>
           <div className="modal-backdrop" />
-          <section className="supplier-form card sales-editor">
+          <section className="supplier-form card sales-editor" ref={editorRef}>
             <button className="sheet-close" onClick={() => setForm(undefined)}>
               <X />
             </button>
             <h2>{form ? 'Edit sale' : 'Add sale'}</h2>
             <form onSubmit={save}>
               <div className="sale-form-grid">
-                <FormSearchableSelect
+                <SearchableSelect
                   key={form?.id || 'new'}
                   items={customers}
-                  initialValue={form?.customerId || ''}
+                  selectedId={customerId}
+                  onSelect={setCustomerId}
                   label="Customer"
                   placeholder="Search or choose a customer…"
                   name="customerId"
                 />
+                <label>Customer pending balance (AED)
+                  <input readOnly value={ledgerError || (customerId ? pending === null ? 'Loading…' : money(pending) : 'Select a customer')} aria-live="polite" />
+                </label>
                 <label>
                   Date
                   <input
@@ -304,12 +413,10 @@ export default function Sales() {
                 </div>
                 {lines.map((x, i) => (
                   <div className="sale-line" key={i}>
-                    <SearchableSelect
-                      items={items.filter(a => a.active || a.id === x.itemId)}
-                      selectedId={x.itemId}
-                      onSelect={id => changeItem(i, id)}
-                      showCode={false}
-                    />
+                    <label>Item name
+                      <input ref={node => { nameRefs.current[i] = node; }} type="text" required maxLength={250}
+                        autoCapitalize="characters" spellCheck={false} placeholder="Enter item name" value={x.itemName} onChange={e => changeItem(i, e.currentTarget)} />
+                    </label>
                     <label>
                       Qty
                       <input
@@ -340,6 +447,7 @@ export default function Sales() {
                     >
                       <Trash2 size={16} />
                     </button>
+                    <button type="button" className="outline line-next" title="Next Item (→)" aria-label="Next Item (→)" onClick={() => nextItem(i)}><ArrowRight size={18} /></button>
                   </div>
                 ))}
               </div>
@@ -377,7 +485,19 @@ export default function Sales() {
         </div>
       )}
 
-      {detail && <Details sale={detail} close={() => setDetail(null)} print={() => { void downloadSale(detail); setDetail(null); }} />}
+      {detail && <Details sale={detail} share={() => void prepareShare(detail)} close={() => setDetail(null)} print={() => { void downloadSale(detail); setDetail(null); }} />}
+      {(sharing || share || shareError) && <div className="modal"><div className="modal-backdrop" /><section className="supplier-form card">
+        <button className="sheet-close" onClick={() => { if (!sharing) { setShare(null); setShareError(''); } }} disabled={sharing}><X /></button>
+        <h2>Send via WhatsApp</h2>
+        {sharing && <p>Preparing invoice PDF…</p>}
+        {shareError && <p className="form-error">{shareError}</p>}
+        {share && <><p>Customer WhatsApp: +{share.phone}</p><p>{share.message}</p>
+          {typeof navigator !== 'undefined' && navigator.canShare?.({ files: [share.file] }) && <button className="primary" onClick={nativeShare}><MessageCircle size={16} /> Share PDF file</button>}
+          <p>For file sharing, choose WhatsApp and this customer in your device’s share sheet.</p>
+          <a className="outline" target="_blank" rel="noopener noreferrer" href={'https://wa.me/' + share.phone + '?text=' + encodeURIComponent(share.message + '\n' + window.location.origin + share.path)}>Open customer WhatsApp with PDF link</a>
+          <small>The private invoice link expires in 7 days. Anyone with the link can view the current saved invoice.</small>
+        </>}
+      </section></div>}
       {remove && (
         <div className="modal delete-confirm-modal">
           <div className="modal-backdrop" />
@@ -437,7 +557,7 @@ function Table({ sale }: { sale: S }) {
             <tr key={x.id}>
               <td data-label="#" className="item-index">{index + 1}</td>
               <td data-label="Item Description">
-                {x.itemCode} · {x.itemName}
+                {x.itemCode ? x.itemCode + ' · ' : ''}{x.itemName}
               </td>
               <td data-label="Qty" className="num">
                 {Number(x.quantity)} {x.unit || ''}
@@ -451,7 +571,7 @@ function Table({ sale }: { sale: S }) {
   );
 }
 
-function Details({ sale, close, print }: { sale: S; close: () => void; print: () => void }) {
+function Details({ sale, close, print, share }: { sale: S; close: () => void; print: () => void; share: () => void }) {
   const balance = +sale.total - +sale.paid;
   return (
     <div className="modal">
@@ -485,6 +605,7 @@ function Details({ sale, close, print }: { sale: S; close: () => void; print: ()
         )}
         <Table sale={sale} />
         <Totals subtotal={cent(sale.subtotal)} discount={sale.discount} paid={sale.paid} />
+        <button className="outline" onClick={share}><MessageCircle size={16} /> Send via WhatsApp</button>
         <button className="primary" onClick={print}>
           <Download size={16} /> Download PDF
         </button>

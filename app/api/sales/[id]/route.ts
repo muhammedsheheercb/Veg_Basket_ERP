@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { detail } from '@/lib/sale-detail';
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
@@ -8,17 +9,19 @@ const cents = (v: any) => {
   const s = String(v ?? '');
   if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
   const [a, b = ''] = s.split('.');
-  return +a * 100 + +(b + '00').slice(0, 2);
+  const amount = +a * 100 + +(b + '00').slice(0, 2);
+  return Number.isSafeInteger(amount) && amount < 100000000000000 ? amount : null;
 };
 const valid = (x: string) => /^[0-9a-f-]{36}$/i.test(x);
 
 function parseLine(x: any) {
   const itemId = String(x.itemId || '');
-  if (!valid(itemId)) return null;
+  const itemName = String(x.itemName || '').trim().toUpperCase();
+  if (!itemName || itemName.length > 250 || (itemId && !valid(itemId))) return null;
   const rawQty = String(x.quantity ?? '').trim();
-  const match = rawQty.match(/^([\d.]+)\s*(.*)$/);
+  const match = rawQty.match(/^(\d+(?:\.\d{1,3})?)\s*([^\d.].*)?$/);
   const numQty = match ? parseFloat(match[1]) : 0;
-  if (!numQty || numQty <= 0) return null;
+  if (!Number.isFinite(numQty) || numQty <= 0 || numQty >= 100000000000) return null;
 
   const unitStr = (match && match[2] ? match[2].trim() : (x.unit ? String(x.unit).trim() : '')) || null;
   let totalCents = cents(x.lineTotal);
@@ -31,9 +34,12 @@ function parseLine(x: any) {
   }
 
   if (totalCents === null || priceCents === null) return null;
+  priceCents = Math.round(totalCents / numQty);
+  if (priceCents >= 100000000000000) return null;
 
   return {
-    itemId,
+    itemId: itemId || null,
+    itemName,
     quantity: Math.round(numQty * 1000),
     unit: unitStr,
     unitPrice: priceCents,
@@ -50,39 +56,6 @@ function parse(b: any) {
   const total = subtotal - discount;
   if (discount > subtotal || paid > total) return null;
   return { ...b, discount, paid, subtotal, total, lines };
-}
-
-async function detail(id: string) {
-  const [sale] = await db.select({
-    id: customerSales.id,
-    invoiceNumber: customerSales.invoiceNumber,
-    customerId: customerSales.customerId,
-    saleDate: customerSales.saleDate,
-    subtotal: customerSales.subtotal,
-    discount: customerSales.discount,
-    total: customerSales.total,
-    paid: customerSales.paid,
-    paymentMethod: customerSales.paymentMethod,
-    notes: customerSales.notes,
-    customerName: customers.name,
-    customerMobile: customers.mobile,
-    customerAddress: customers.address
-  }).from(customerSales).innerJoin(customers, eq(customerSales.customerId, customers.id)).where(eq(customerSales.id, id));
-
-  if (!sale) return null;
-
-  const lines = await db.select({
-    id: saleItems.id,
-    itemId: saleItems.itemId,
-    itemCode: items.code,
-    itemName: items.name,
-    quantity: saleItems.quantity,
-    unit: saleItems.unit,
-    unitPrice: saleItems.unitPrice,
-    lineTotal: saleItems.lineTotal
-  }).from(saleItems).innerJoin(items, eq(saleItems.itemId, items.id)).where(eq(saleItems.saleId, id));
-
-  return { ...sale, items: lines };
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -111,9 +84,11 @@ export async function PUT(r: Request, { params }: { params: Promise<{ id: string
         notes: v.notes || null
       }).where(eq(customerSales.id, id));
       await tx.delete(saleItems).where(eq(saleItems.saleId, id));
-      await tx.insert(saleItems).values(v.lines.map(x => ({
+      await tx.insert(saleItems).values(v.lines.map((x, position) => ({
         saleId: id,
         itemId: x.itemId,
+        itemName: x.itemName,
+        position,
         quantity: (x.quantity / 1000).toFixed(3),
         unit: x.unit || null,
         unitPrice: (x.unitPrice / 100).toFixed(2),
