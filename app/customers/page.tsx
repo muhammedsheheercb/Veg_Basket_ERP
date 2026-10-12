@@ -1,4 +1,5 @@
 "use client";
+import { customerPaymentError } from '@/lib/customer-payment';
 import { useEffect, useRef, useState } from "react";
 import {
   Download,
@@ -24,9 +25,10 @@ export default function Customers() {
   const [form, setForm] = useState<any>(undefined);
   const [ledger, setLedger] = useState<any>(null);
   const [remove, setRemove] = useState<any>(null);
-  const [selected, setSelected] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentTouched, setPaymentTouched] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const load = () =>
@@ -149,13 +151,22 @@ export default function Customers() {
 
   const open = async (id: string) => {
     setError("");
-    setSelected("");
+    setPaymentAmount("");
+    setPaymentTouched(false);
     const d = await get(id);
     if (d) setLedger(d);
   };
 
-  const sale = selected === 'opening' ? { invoiceNumber: 'Opening Balance', total: ledger?.summary?.openingBalance || 0, paid: (ledger?.payments || []).filter((payment: any) => !payment.saleId).reduce((sum: number, payment: any) => sum + +payment.amount, 0) } : ledger?.sales?.find((x: any) => x.id === selected);
-  const due = sale ? +sale.total - +sale.paid : 0;
+  const due = Math.round(Number(ledger?.summary?.outstanding || 0) * 1000) / 1000;
+
+  function closeLedger() {
+    setLedger(null);
+    setError("");
+    setPaymentAmount("");
+    setPaymentTouched(false);
+  }
+
+  const paymentError = customerPaymentError(paymentAmount, due);
 
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -180,22 +191,22 @@ export default function Customers() {
 
   async function pay(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!ledger || !sale) return;
-    const d = new FormData(e.currentTarget);
+    if (!ledger || busy) return;
+    const paymentForm = e.currentTarget;
+    const d = new FormData(paymentForm);
     const amount = Number(d.get("amount"));
-    if (!Number.isFinite(amount) || amount <= 0 || amount > due) {
-      return setError(
-        "Payment must be greater than AED 0.00 and cannot exceed the invoice balance.",
-      );
-    }
+    setPaymentTouched(true);
+    const invalid = customerPaymentError(d.get("amount"), due);
+    if (invalid) { setError(invalid); return; }
     setBusy(true);
+    setError("");
+    try {
     const r = await fetch(
       "/api/customers/" + ledger.customer.id + "/payments",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          saleId: selected,
           date: d.get("date"),
           amount,
           method: d.get("method"),
@@ -203,14 +214,18 @@ export default function Customers() {
         }),
       },
     );
-    setBusy(false);
     if (r.ok) {
-      setLedger(null);
-      setSelected("");
-      void load();
+      const updated = await get(ledger.customer.id);
+      if (updated) setLedger(updated);
+      paymentForm.reset();
+      setPaymentAmount("");
+      setPaymentTouched(false);
+      await load();
     } else {
       setError((await r.json()).error);
     }
+    } catch { setError("Unable to save payment. Please check your connection and refresh the ledger before retrying."); }
+    finally { setBusy(false); }
   }
 
   return (
@@ -467,16 +482,17 @@ export default function Customers() {
 
       {ledger &&
         (ledger.statement ? (
-          <Statement ledger={ledger} close={() => setLedger(null)} />
+          <Statement ledger={ledger} close={closeLedger} />
         ) : (
           <CustomerLedger
             ledger={ledger}
-            close={() => setLedger(null)}
-            selected={selected}
-            setSelected={setSelected}
-            sale={sale}
+            close={closeLedger}
             due={due}
             pay={pay}
+            paymentAmount={paymentAmount}
+            paymentError={paymentError}
+            paymentTouched={paymentTouched}
+            changePayment={(value: string) => { setPaymentAmount(value); setPaymentTouched(true); setError(""); }}
             error={error}
             busy={busy}
           />
@@ -488,11 +504,12 @@ export default function Customers() {
 function CustomerLedger({
   ledger,
   close,
-  selected,
-  setSelected,
-  sale,
   due,
   pay,
+  paymentAmount,
+  paymentError,
+  paymentTouched,
+  changePayment,
   error,
   busy,
 }: any) {
@@ -537,29 +554,8 @@ function CustomerLedger({
           </div>
         ))}
         <h3>Record payment</h3>
-        <form className="pay-form" onSubmit={pay}>
-          <select
-            name="saleId"
-            required
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-          >
-            <option value="">Select sales invoice</option>
-            {+ledger.summary.openingBalance > (ledger.payments || []).filter((payment: any) => !payment.saleId).reduce((sum: number, payment: any) => sum + +payment.amount, 0) && <option value="opening">Opening Balance · outstanding {money(+ledger.summary.openingBalance - (ledger.payments || []).filter((payment: any) => !payment.saleId).reduce((sum: number, payment: any) => sum + +payment.amount, 0))}</option>}
-            {ledger.sales
-              .filter((x: any) => +x.paid < +x.total)
-              .map((x: any) => (
-                <option key={x.id} value={x.id}>
-                  {x.invoiceNumber} · outstanding {money(+x.total - +x.paid)}
-                </option>
-              ))}
-          </select>
-          {sale && (
-            <p className="payment-hint">
-              Invoice {sale.invoiceNumber} · Total {money(sale.total)} · Paid{" "}
-              {money(sale.paid)} · Outstanding <b>{money(due)}</b>
-            </p>
-          )}
+        <form className="pay-form" onSubmit={pay} noValidate>
+          <p className="payment-hint">Current Outstanding Balance <b>{money(due)}</b></p>
           <input
             name="date"
             type="date"
@@ -571,10 +567,14 @@ function CustomerLedger({
             name="amount"
             type="number"
             min=".01"
-            max={due || undefined}
+            aria-label="Payment amount"
+            value={paymentAmount}
+            onChange={(e) => changePayment(e.target.value)}
+            aria-invalid={paymentTouched && !!paymentError}
+            aria-describedby={paymentTouched && paymentError ? 'customer-payment-error' : undefined}
             step=".01"
             required
-            disabled={!sale}
+            disabled={due <= 0}
             placeholder="Amount"
           />
           <select name="method">
@@ -583,11 +583,20 @@ function CustomerLedger({
             <option>Bank Transfer</option>
           </select>
           <input name="notes" placeholder="Notes" />
-          {error && <div className="form-error">{error}</div>}
-          <button className="primary" disabled={busy || !sale}>
+          {((paymentTouched && paymentError) || error) && <div id="customer-payment-error" className="form-error" role="alert">{(paymentTouched && paymentError) || error}</div>}
+          {!paymentError && <button className="primary" disabled={busy}>
             {busy ? "Processing…" : "Record payment"}
-          </button>
+          </button>}
         </form>
+        <h3>Payment history</h3>
+        {(ledger.payments || []).map((payment: any) => (
+          <div className="ledger-line" key={payment.id}>
+            <span><b>{payment.paymentDate}</b><small>{payment.notes || 'Customer payment'}</small></span>
+            <span>{money(payment.amount)}</span>
+            <span>{payment.method}</span>
+            <span>{payment.invoiceNumber || 'Account payment'}</span>
+          </div>
+        ))}
       </section>
     </div>
   );

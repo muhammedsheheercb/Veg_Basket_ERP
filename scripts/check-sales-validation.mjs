@@ -18,12 +18,16 @@ for (const path of ['app/api/sales/route.ts', 'app/api/sales/[id]/route.ts']) {
   assert.equal(result.lines[0].unit, 'box');
   assert.equal(result.lines[0].unitPrice, 6250);
   assert.equal(result.lines[1].quantity, 1500);
-  const precise = context.parseInvoice({ ...bill, discount: '0', paid: '0', items: [{ itemName: 'tomato', quantity: '3', unitPrice: '40.125', lineTotal: '999' }] });
+  const precise = context.parseInvoice({ ...bill, discount: '0', paid: '1', items: [{ itemName: 'tomato', quantity: '3', unitPrice: '40.125', lineTotal: '999' }] });
   assert.equal(precise.lines[0].unitPrice, 40125);
   assert.equal(precise.lines[0].lineTotal, 120375);
   assert.equal(precise.total, 120375);
   assert.equal(context.parseInvoice({ ...bill, items: [{ itemName: 'tomato', quantity: '1', unitPrice: '1.2345' }] }), null);
   assert.equal(context.parseInvoice({ ...bill, paid: '18.00' }), null);
+  assert.equal(context.parseInvoice({ ...bill, paid: '0' }).paid, 0);
+  assert.equal(context.parseInvoice({ ...bill, paid: '0.000', accountPayment: true }).paid, 0);
+  assert.equal(context.parseInvoice({ ...bill, paid: '-1' }), null);
+  assert.equal(context.parseInvoice({ ...bill, paid: '17.50' }).paid, 17500);
   assert.equal(context.parseInvoice({ ...bill, discount: '21.00' }), null);
   for (const quantity of ['1.2.3', '0', '-1', 'Infinity', '0.5']) {
     assert.equal(context.parseInvoice({ ...bill, items: [{ itemName: 'Produce', quantity, lineTotal: '10' }] }), null);

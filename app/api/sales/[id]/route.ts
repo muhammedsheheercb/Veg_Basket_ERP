@@ -1,8 +1,10 @@
 // @ts-nocheck
 import { detail } from '@/lib/sale-detail';
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
+import { splitSalePayment } from '@/lib/customer-balance';
+import { salesPaymentError } from '@/lib/sales-payment';
 import { customerPayments, customerSales, customers, items, saleItems } from '@/lib/schema';
 
 const cents = (v: any) => {
@@ -54,7 +56,7 @@ function parse(b: any) {
   const subtotal = lines.reduce((n: number, x) => n + x.lineTotal, 0);
   if (!Number.isSafeInteger(subtotal) || subtotal >= 100000000000000) return null;
   const total = subtotal - discount;
-  if (discount > subtotal || paid > total) return null;
+  if (discount > subtotal || (b.accountPayment !== true && paid > total)) return null;
   return { ...b, discount, paid, subtotal, total, lines };
 }
 
@@ -64,7 +66,14 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 }
 
 export async function PUT(r: Request, { params }: { params: Promise<{ id: string }> }) {
-  const v = parse(await r.json());
+  const body = await r.json();
+  const paymentError = salesPaymentError(body.paid);
+  if (paymentError) return NextResponse.json({ error: paymentError }, { status: 400 });
+  const v = parse(body);
+  if (!v && body.accountPayment !== true) {
+    const invoice = parse({ ...body, accountPayment: true });
+    if (invoice && salesPaymentError(body.paid, invoice.total)) return NextResponse.json({ error: salesPaymentError(body.paid, invoice.total) }, { status: 400 });
+  }
   if (!v) return NextResponse.json({ error: 'Enter valid invoice data.' }, { status: 400 });
   try {
     const id = (await params).id;
@@ -73,13 +82,21 @@ export async function PUT(r: Request, { params }: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Paid amount cannot be lower than recorded payments.' }, { status: 400 });
     }
     await db.transaction(async tx => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${v.customerId}))`);
+      const [previous] = await tx.select().from(customerSales).where(eq(customerSales.id, id));
+      if (!previous) throw Error('Sale not found.');
+      const summary = v.accountPayment ? await splitSalePayment(tx, v, previous) : { invoicePaid: v.paid, existingBalance: 0, accountPaid: 0, accountPaymentId: null };
+      if (summary.invoicePaid < payments.reduce((sum, payment) => sum + Math.round(Number(payment.amount) * 1000), 0)) throw Error('Paid amount cannot be lower than recorded payments.');
       await tx.update(customerSales).set({
         customerId: v.customerId,
         saleDate: v.date,
         subtotal: (v.subtotal / 1000).toFixed(3),
         discount: (v.discount / 1000).toFixed(3),
         total: (v.total / 1000).toFixed(3),
-        paid: (v.paid / 1000).toFixed(3),
+        paid: (summary.invoicePaid / 1000).toFixed(3),
+        existingBalance: (summary.existingBalance / 1000).toFixed(3),
+        accountPaid: (summary.accountPaid / 1000).toFixed(3),
+        accountPaymentId: summary.accountPaymentId,
         paymentMethod: v.method || null,
         notes: v.notes || null
       }).where(eq(customerSales.id, id));
@@ -96,8 +113,8 @@ export async function PUT(r: Request, { params }: { params: Promise<{ id: string
       })));
     });
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: 'Unable to update sale.' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to update sale.' }, { status: 400 });
   }
 }
 
@@ -105,6 +122,8 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   try {
     const id = (await params).id;
     await db.transaction(async tx => {
+      const [sale] = await tx.select().from(customerSales).where(eq(customerSales.id, id));
+      if (sale?.accountPaymentId) await tx.delete(customerPayments).where(eq(customerPayments.id, sale.accountPaymentId));
       await tx.delete(customerPayments).where(eq(customerPayments.saleId, id));
       await tx.delete(saleItems).where(eq(saleItems.saleId, id));
       await tx.delete(customerSales).where(eq(customerSales.id, id));

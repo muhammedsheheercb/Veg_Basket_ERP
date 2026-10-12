@@ -1,4 +1,5 @@
 'use client';
+import { salesPaymentError } from '@/lib/sales-payment';
 import { useEffect, useRef, useState, FormEvent } from 'react';
 import Image from 'next/image';
 import { flushSync } from 'react-dom';
@@ -8,7 +9,7 @@ import { ListFilters, ListPagination, useListControls } from '@/components/list-
 import { createPdfBlob, downloadPdf, downloadPdfFromElement } from '@/components/pdf-download';
 import { SearchableSelect } from '@/components/price-list-item-picker';
 
-import { salesPdfData } from '@/lib/sales-pdf';
+import { salesPaymentSummary, salesPdfData } from '@/lib/sales-pdf';
 
 type L = { itemName: string; itemId: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
 type R = { id: string; invoice: string; customer: string; date: string; total: string; paid: string };
@@ -21,6 +22,8 @@ type S = {
   discount: string;
   total: string;
   paid: string;
+  existingBalance?: string | null;
+  accountPaid?: string;
   paymentMethod?: string;
   notes?: string;
   customerName: string;
@@ -57,13 +60,14 @@ export default function Sales() {
   const [lines, setLines] = useState<L[]>([blank()]);
   const [discount, setDiscount] = useState('0.00');
   const [paid, setPaid] = useState('0.00');
+  const [paymentTouched, setPaymentTouched] = useState(false);
   const [detail, setDetail] = useState<S | null>(null);
   const [remove, setRemove] = useState<R | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = () => {
-    fetch('/api/sales').then(r => r.json()).then(setRows);
+    fetch('/api/sales', { cache: 'no-store' }).then(r => r.json()).then(setRows);
     fetch('/api/customers').then(r => r.json()).then(setCustomers);
 
   };
@@ -91,7 +95,9 @@ export default function Sales() {
     const controller = new AbortController();
     fetch('/api/customers/' + customerId, { signal: controller.signal, cache: 'no-store' })
       .then(async r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(data => setPending(String(data.summary.outstanding)))
+      .then(data => setPending(form?.customerId === customerId && form.existingBalance != null
+        ? form.existingBalance
+        : String(Math.max(0, Number(data.summary.outstanding) - (form?.customerId === customerId ? Number(form.total) - Number(form.paid) - Number(form.accountPaid || 0) : 0)))))
       .catch(e => { if (e.name !== 'AbortError') setLedgerError('Unable to load customer balance. Reselect the customer to retry.'); });
     return () => controller.abort();
   }, [customerId, form]);
@@ -206,9 +212,19 @@ export default function Sales() {
     catch (e) { if (!(e instanceof Error && e.name === 'AbortError')) setShareError('File sharing was unavailable. Use the WhatsApp link below.'); }
   }
 
+  function closeEditor() {
+    setForm(undefined);
+    setError('');
+    setLedgerError('');
+    setPaymentTouched(false);
+  }
+
   const edit = async (r: R) => {
     const s = await get(r.id);
     if (s) {
+      setError('');
+      setLedgerError('');
+      setPaymentTouched(false);
       setLines(
         s.items.map((x: any) => ({
           itemId: x.itemId || '',
@@ -220,7 +236,7 @@ export default function Sales() {
         }))
       );
       setDiscount(String(s.discount || '0.00'));
-      setPaid(String(s.paid || '0.00'));
+      setPaid(((cent(s.paid) + cent(s.accountPaid || 0)) / 1000).toFixed(3));
       setCustomerId(s.customerId);
       setForm(s);
     }
@@ -250,9 +266,18 @@ export default function Sales() {
 
   const subtotal = lines.reduce((n, x) => n + cent(x.lineTotal), 0);
 
+  const grandTotal = Math.max(0, subtotal - cent(discount)) + cent(pending || 0);
+  const paymentError = salesPaymentError(paid, pending === null ? undefined : grandTotal);
+
+  const visiblePaymentError = paymentTouched ? paymentError : '';
+
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (busy) return;
+    setPaymentTouched(true);
+    if (paymentError) { setError(''); return; }
     if (!lines.length) { setError('Add at least one invoice item.'); return; }
+    if (pending === null || ledgerError) { setError('Wait for the customer balance to load before saving.'); return; }
     setBusy(true);
     setError('');
     const d = new FormData(e.currentTarget);
@@ -265,6 +290,7 @@ export default function Sales() {
         date: d.get('date'),
         discount: d.get('discount'),
         paid: d.get('paid'),
+        accountPayment: true,
         method: d.get('method'),
         notes: d.get('notes'),
         items: lines
@@ -272,7 +298,7 @@ export default function Sales() {
     });
     setBusy(false);
     if (r.ok) {
-      setForm(undefined);
+      closeEditor();
       load();
     } else setError((await r.json()).error);
     } catch { setError('Unable to save sale. Please check your connection and try again.'); }
@@ -305,6 +331,8 @@ export default function Sales() {
             setDiscount('0.00');
             setPaid('0.00');
             setCustomerId(''); setError('');
+            setLedgerError('');
+            setPaymentTouched(false);
             setForm(null);
           }}
         >
@@ -412,7 +440,7 @@ export default function Sales() {
         <div className="modal sales-editor-modal" ref={editorModalRef}>
           <div className="modal-backdrop" />
           <section className="supplier-form card sales-editor" ref={editorRef}>
-            <button className="sheet-close" onClick={() => setForm(undefined)}>
+            <button className="sheet-close" onClick={closeEditor}>
               <X />
             </button>
             <h2>{form ? 'Edit sale' : 'Add sale'}</h2>
@@ -427,7 +455,7 @@ export default function Sales() {
                   placeholder="Search or choose a customer…"
                   name="customerId"
                 />
-                <label>Customer pending balance (AED)
+                <label>Existing Balance Amount (AED)
                   <input readOnly value={ledgerError || (customerId ? pending === null ? 'Loading…' : money(pending) : 'Select a customer')} aria-live="polite" />
                 </label>
                 <label>
@@ -479,7 +507,7 @@ export default function Sales() {
                 </label>
                 <label>
                   Paid amount (AED)
-                  <input name="paid" type="number" min="0" step=".01" max={Math.max(0, subtotal - cent(discount)) / 1000} value={paid} onChange={e => setPaid(e.target.value)} />
+                  <input name="paid" type="number" inputMode="decimal" step="any" value={paid} aria-invalid={!!visiblePaymentError} aria-describedby={visiblePaymentError ? 'sales-payment-error' : undefined} onChange={e => { setPaid(e.target.value); setPaymentTouched(true); setError(''); }} />
                 </label>
                 <label>
                   Payment method
@@ -495,11 +523,11 @@ export default function Sales() {
                 </label>
               </div>
 
-              <Totals subtotal={subtotal} discount={discount} paid={paid} />
-              {error && <div className="form-error">{error}</div>}
-              <button className="primary sales-submit" disabled={busy}>
+              <Totals subtotal={subtotal} discount={discount} paid={paid} existing={pending === null ? null : cent(pending)} />
+              {(visiblePaymentError || error) && <div id="sales-payment-error" className="form-error" role="alert">{visiblePaymentError || error}</div>}
+              {!paymentError && <button className="primary sales-submit" disabled={busy || pending === null || !!ledgerError}>
                 {busy ? 'Saving…' : form ? 'Update sale' : 'Create sale'}
-              </button>
+              </button>}
             </form>
           </section>
         </div>
@@ -538,18 +566,19 @@ export default function Sales() {
   );
 }
 
-function Totals({ subtotal, discount, paid }: { subtotal: number; discount: string; paid: string }) {
+function Totals({ subtotal, discount, paid, existing }: { subtotal: number; discount: string; paid: string; existing?: number | null }) {
   const d = cent(discount),
     p = cent(paid),
     total = Math.max(0, subtotal - d);
   return (
     <div className="sale-totals">
       {[
-        ['Subtotal', subtotal],
+        ['Total Item Amount', subtotal],
         ['Discount', d],
-        ['Grand total', total],
-        ['Paid amount', p],
-        ['Balance amount', Math.max(0, total - p)]
+        ...(existing !== undefined ? [['Existing Balance Amount', existing ?? 0]] : []),
+        ['Grand Total', total + (existing ?? 0)],
+        ['Paid Amount', p],
+        ['Remaining Balance', total + (existing ?? 0) - p]
       ].map(([a, b]) => (
         <span key={String(a)}>
           {a}
@@ -624,7 +653,7 @@ function Details({ sale, close, print, share }: { sale: S; close: () => void; pr
           </p>
         )}
         <Table sale={sale} />
-        <Totals subtotal={cent(sale.subtotal)} discount={sale.discount} paid={sale.paid} />
+        <Totals subtotal={cent(sale.subtotal)} discount={sale.discount} paid={((cent(sale.paid) + cent(sale.accountPaid || 0)) / 1000).toFixed(3)} existing={cent(sale.existingBalance || 0)} />
         <button className="outline" onClick={share}><MessageCircle size={16} /> Send via WhatsApp</button>
         <button className="primary" onClick={print}>
           <Download size={16} /> Download PDF
@@ -691,11 +720,9 @@ function Invoice({ sale, close }: { sale: S; close: () => void }) {
       <div className="invoice-bottom">
         <div className="invoice-thanks"><Leaf /><p>Thank you<br />for your business!</p><small>Fresh produce<br />better living</small></div>
         <div className="bill-summary invoice-summary">
-          <span>Subtotal<strong>{money(sale.subtotal)}</strong></span>
-          <span>Discount<strong>{money(sale.discount)}</strong></span>
-          <span>Grand Total<strong>{money(sale.total)}</strong></span>
-          <span>Paid Amount<strong>{money(sale.paid)}</strong></span>
-          <span>Balance Amount<strong>{money(balance)}</strong></span>
+          {salesPaymentSummary(sale).map(([label, amount]) => (
+            <span key={label} className={label === 'Grand Total' || label === 'Remaining Balance' ? 'payment-summary-strong' : undefined}>{label}<strong>{amount}</strong></span>
+          ))}
         </div>
       </div>
       <section className="invoice-notes"><h2><FileText /> Notes</h2><p>{sale.notes || 'Thank you for doing business with Veg Basket.'}</p></section>

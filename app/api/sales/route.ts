@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
+import { splitSalePayment } from '@/lib/customer-balance';
+import { salesPaymentError } from '@/lib/sales-payment';
 import { customerSales, customers, saleItems } from '@/lib/schema';
 
 const cents = (v: any) => {
@@ -53,17 +55,24 @@ function parse(b: any) {
   const subtotal = lines.reduce((n: number, x) => n + x.lineTotal, 0);
   if (!Number.isSafeInteger(subtotal) || subtotal >= 100000000000000) return null;
   const total = subtotal - discount;
-  if (discount > subtotal || paid > total) return null;
-  return { customerId: b.customerId, date: b.date, discount, paid, subtotal, total, method: b.method || null, notes: b.notes || null, lines };
+  if (discount > subtotal || (b.accountPayment !== true && paid > total)) return null;
+  return { customerId: b.customerId, date: b.date, discount, paid, subtotal, total, method: b.method || null, notes: b.notes || null, accountPayment: b.accountPayment === true, lines };
 }
 
 export async function GET() {
-  return NextResponse.json(await db.select({ id: customerSales.id, invoice: customerSales.invoiceNumber, date: customerSales.saleDate, total: customerSales.total, paid: customerSales.paid, customer: customers.name }).from(customerSales).innerJoin(customers, eq(customerSales.customerId, customers.id)).orderBy(desc(customerSales.saleDate)).limit(50));
+  return NextResponse.json(await db.select({ id: customerSales.id, invoice: customerSales.invoiceNumber, date: customerSales.saleDate, total: customerSales.total, paid: customerSales.paid, customer: customers.name }).from(customerSales).innerJoin(customers, eq(customerSales.customerId, customers.id)).orderBy(desc(customerSales.createdAt), desc(customerSales.invoiceNumber), desc(customerSales.id)), { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(r: Request) {
   try {
-    const v = parse(await r.json());
+    const body = await r.json();
+    const paymentError = salesPaymentError(body.paid);
+    if (paymentError) return NextResponse.json({ error: paymentError }, { status: 400 });
+    const v = parse(body);
+    if (!v && body.accountPayment !== true) {
+      const invoice = parse({ ...body, accountPayment: true });
+      if (invoice && salesPaymentError(body.paid, invoice.total)) return NextResponse.json({ error: salesPaymentError(body.paid, invoice.total) }, { status: 400 });
+    }
     if (!v) return NextResponse.json({ error: 'Enter a customer, date, valid items and amounts.' }, { status: 400 });
     const sale = await db.transaction(async tx => {
       // A count is not an invoice sequence: deleted invoices or historic gaps
@@ -75,6 +84,7 @@ export async function POST(r: Request) {
         const match = /^SAL-(\d+)$/.exec(invoiceNumber);
         return match ? Math.max(highest, Number(match[1])) : highest;
       }, 0);
+      const summary = v.accountPayment ? await splitSalePayment(tx, v) : { invoicePaid: v.paid, existingBalance: 0, accountPaid: 0, accountPaymentId: null };
       const [row] = await tx.insert(customerSales).values({
         invoiceNumber: `SAL-${String(highestInvoice + 1).padStart(5, '0')}`,
         customerId: v.customerId,
@@ -82,7 +92,10 @@ export async function POST(r: Request) {
         subtotal: (v.subtotal / 1000).toFixed(3),
         discount: (v.discount / 1000).toFixed(3),
         total: (v.total / 1000).toFixed(3),
-        paid: (v.paid / 1000).toFixed(3),
+        paid: (summary.invoicePaid / 1000).toFixed(3),
+        existingBalance: (summary.existingBalance / 1000).toFixed(3),
+        accountPaid: (summary.accountPaid / 1000).toFixed(3),
+        accountPaymentId: summary.accountPaymentId,
         paymentMethod: v.method,
         notes: v.notes
       }).returning();
@@ -99,7 +112,7 @@ export async function POST(r: Request) {
       return row;
     });
     return NextResponse.json(sale, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Unable to create sale.' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unable to create sale.' }, { status: 400 });
   }
 }

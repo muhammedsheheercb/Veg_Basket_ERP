@@ -15,6 +15,7 @@
     "db:migrate-opening-balance-payments": "node --env-file=.env scripts/migrate-opening-balance-payments.mjs",
     "db:migrate-price-lists": "node --env-file=.env scripts/migrate-price-lists.mjs",
     "db:migrate-sales-manual-items": "node --env-file=.env scripts/migrate-sales-manual-items.mjs",
+    "db:migrate-sales-payment-summary": "node --env-file=.env scripts/migrate-sales-payment-summary.mjs",
     "db:migrate-sales-rate-precision": "node --env-file=.env scripts/migrate-sales-rate-precision.mjs"
   },
   "dependencies": {

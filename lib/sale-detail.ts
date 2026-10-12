@@ -11,6 +11,8 @@ export async function detail(id: string) {
     discount: customerSales.discount,
     total: customerSales.total,
     paid: customerSales.paid,
+    existingBalance: customerSales.existingBalance,
+    accountPaid: customerSales.accountPaid,
     paymentMethod: customerSales.paymentMethod,
     notes: customerSales.notes,
     customerName: customers.name,
