@@ -25,7 +25,7 @@ type D = {
   accountPaid?: string | number;
   items?: PurchaseLine[];
 };
-type PurchaseLine = { itemId: string; itemName: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
+type PurchaseLine = { id?: string; itemId: string; itemName: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
 const blankLine = (): PurchaseLine => ({ itemId:'', itemName:'', quantity:'1', unit:'', unitPrice:'0.000', lineTotal:'0.000' });
 const money3 = (amount: number) => `AED ${(amount/1000).toLocaleString('en-AE',{minimumFractionDigits:3,maximumFractionDigits:3})}`;
 const toMilli = (value: string|number) => { const [whole,fraction='']=String(value||'0').split('.');return (Number(whole)||0)*1000+Number((fraction+'000').slice(0,3)); };
