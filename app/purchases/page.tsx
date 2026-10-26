@@ -7,7 +7,7 @@ import { ListFilters, ListPagination, useListControls } from '@/components/list-
 import { downloadPdf } from '@/components/pdf-download';
 import { FormSearchableSelect } from '@/components/price-list-item-picker';
 
-type P = { id: string; invoice: string; supplier: string; date: string; total: string; paid: string };
+type P = { id: string; invoice: string; supplier: string; date: string; total: string; paid: string; balancePayable: string };
 type D = {
   id: string;
   invoiceNumber: string;
@@ -21,9 +21,17 @@ type D = {
   supplierName: string;
   supplierMobile?: string;
   supplierAddress?: string;
+  existingBalance?: string | number;
+  accountPaid?: string | number;
+  items?: PurchaseLine[];
 };
+type PurchaseLine = { itemId: string; itemName: string; quantity: string; unit: string; unitPrice: string; lineTotal: string };
+const blankLine = (): PurchaseLine => ({ itemId:'', itemName:'', quantity:'1', unit:'', unitPrice:'0.000', lineTotal:'0.000' });
+const money3 = (amount: number) => `AED ${(amount/1000).toLocaleString('en-AE',{minimumFractionDigits:3,maximumFractionDigits:3})}`;
+const toMilli = (value: string|number) => { const [whole,fraction='']=String(value||'0').split('.');return (Number(whole)||0)*1000+Number((fraction+'000').slice(0,3)); };
+const moneyPurchase = (value: string|number) => money3(toMilli(value));
 
-const status = (p: D) => (Number(p.paid) >= Number(p.total) ? 'Paid' : Number(p.paid) > 0 ? 'Partial' : 'Unpaid');
+const status = (p: D) => { const paid=Number(p.paid)+Number(p.accountPaid||0),grand=Number(p.total)+Number(p.existingBalance||0);return paid>=grand?'Paid':paid>0?'Partial':'Unpaid'; };
 
 export default function Purchases() {
   const [rows, setRows] = useState<P[]>([]);
@@ -33,12 +41,48 @@ export default function Purchases() {
   const [print, setPrint] = useState<D | null>(null);
   const [remove, setRemove] = useState<P | null>(null);
   const [error, setError] = useState('');
+  const [items, setItems] = useState<any[]>([]);
+  const [lines, setLines] = useState<PurchaseLine[]>([blankLine()]);
+  const [paid, setPaid] = useState('0.000');
+  const [supplierId, setSupplierId] = useState('');
+  const [supplierBalance, setSupplierBalance] = useState<number | null>(null);
+  const [supplierBalanceError, setSupplierBalanceError] = useState('');
+
+  useEffect(() => { fetch('/api/items?all=1').then(r=>r.ok?r.json():[]).then(x=>Array.isArray(x)&&setItems(x)); }, []);
 
   const load = () => {
-    fetch('/api/purchases').then((r) => r.json()).then((x) => Array.isArray(x) && setRows(x));
-    fetch('/api/suppliers').then((r) => r.json()).then((x) => Array.isArray(x) && setSuppliers(x));
+    fetch('/api/purchases', { cache: 'no-store' }).then((r) => r.json()).then((x) => Array.isArray(x) && setRows(x));
+    fetch('/api/suppliers', { cache: 'no-store' }).then((r) => r.json()).then((x) => Array.isArray(x) && setSuppliers(x));
   };
-  useEffect(load, []);
+  useEffect(() => {
+    void load();
+    const refresh = () => void load();
+    const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pageshow', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!supplierId || form === undefined) { setSupplierBalance(null); setSupplierBalanceError(''); return; }
+    if(form?.supplierId===supplierId&&form.existingBalance!=null){setSupplierBalance(toMilli(form.existingBalance));setSupplierBalanceError('');return;}
+    const controller = new AbortController();
+    setSupplierBalance(null); setSupplierBalanceError('');
+    fetch('/api/suppliers/' + supplierId, { signal:controller.signal, cache:'no-store' })
+      .then(async response=>{if(!response.ok)throw new Error();return response.json();})
+      .then(data=>{
+        const currentBillDue=form?.supplierId===supplierId?Math.max(0,Number(form.total)-Number(form.paid)):0;
+        const priorAccountPayment=form?.supplierId===supplierId?Number(form.accountPaid||0):0;
+        setSupplierBalance(Math.max(0,Math.round((Number(data.summary.payable)-currentBillDue+priorAccountPayment)*1000)));
+      })
+      .catch(error=>{if(error.name!=='AbortError')setSupplierBalanceError('Unable to load supplier balance. Reselect the supplier to retry.');});
+    return ()=>controller.abort();
+  },[supplierId,form]);
 
   const controls = useListControls(
     rows,
@@ -51,8 +95,21 @@ export default function Purchases() {
     return r.ok ? r.json() : null;
   };
 
+  function changeLine(index:number, field:'quantity'|'unitPrice', value:string) {
+    if(!/^\d*(?:\.\d{0,3})?$/.test(value)) return;
+    if(field==='quantity'&&value!==''&&Number(value)<1)return;
+    setLines(current=>current.map((line,i)=>{if(i!==index)return line;const next={...line,[field]:value};return{...next,lineTotal:(Math.round(Number(next.quantity||1)*toMilli(next.unitPrice))/1000).toFixed(3)};}));
+  }
+  const subtotal=lines.reduce((sum,line)=>sum+toMilli(line.lineTotal),0);
+  const existingBalance=supplierBalance ?? 0;
+  const grandTotal=subtotal+existingBalance;
+  const balance=grandTotal-toMilli(paid);
+
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!lines.length) { setError('Add at least one purchase item.'); return; }
+    if (lines.some(line=>!line.itemName.trim()||Number(line.quantity)<1||!/^\d+(\.\d{1,3})?$/.test(line.unitPrice))) { setError('Enter an item, quantity and valid rate for every row.'); return; }
+    if (grandTotal - toMilli(paid) < 0) { setError('Paid amount cannot exceed grand total.'); return; }
     const d = new FormData(e.currentTarget);
     const r = await fetch(form?.id ? '/api/purchases/' + form.id : '/api/purchases', {
       method: form?.id ? 'PUT' : 'POST',
@@ -61,9 +118,8 @@ export default function Purchases() {
         idempotencyKey: crypto.randomUUID(),
         supplierId: d.get('supplierId'),
         date: d.get('date'),
-        description: d.get('description'),
-        total: d.get('total'),
-        paid: d.get('paid'),
+        items: lines,
+        paid,
         method: d.get('method'),
         notes: d.get('notes'),
       }),
@@ -94,7 +150,7 @@ export default function Purchases() {
           <h1>Purchases</h1>
           <p>Purchase bills and supplier balances.</p>
         </div>
-        <button className="primary" onClick={() => { setError(''); setForm(null); }}>
+        <button className="primary" onClick={() => { setError(''); setPaid('0.000'); setLines([blankLine()]); setSupplierId(''); setForm(null); }}>
           <Plus size={17} /> <span>Add purchase</span>
         </button>
       </header>
@@ -118,12 +174,12 @@ export default function Purchases() {
               <span>{p.supplier}</span>
               <span>{shortDate(p.date)}</span>
               <span>{money(p.total)}</span>
-              <b>{money(Number(p.total) - Number(p.paid))}</b>
+              <b>{money(p.balancePayable)}</b>
               <span className="row-actions">
                 <button title="View" onClick={async () => setDetails(await get(p.id))}>
                   <Eye size={16} />
                 </button>
-                <button title="Edit" onClick={async () => setForm(await get(p.id))}>
+                <button title="Edit" onClick={async () => { const purchase=await get(p.id); if(!purchase)return; setSupplierId(purchase.supplierId); setForm(purchase); setPaid((Number(purchase.paid||0)+Number(purchase.accountPaid||0)).toFixed(3)); setLines(purchase.items?.length?purchase.items.map((line:PurchaseLine)=>({...line,quantity:String(line.quantity),unitPrice:String(line.unitPrice),lineTotal:String(line.lineTotal)})):[{...blankLine(),itemName:purchase.description||'Purchase item',quantity:'1',unitPrice:(Number(purchase.total)/1000).toFixed(3),lineTotal:(Number(purchase.total)/1000).toFixed(3)}]); }}>
                   <Pencil size={16} />
                 </button>
                 <button className="danger" title="Delete" onClick={() => setRemove(p)}>
@@ -140,9 +196,9 @@ export default function Purchases() {
         {/* MOBILE CARDS VIEW */}
         <div className="mobile-only" style={{ marginTop: '12px' }}>
           {controls.pageRows.map((p) => {
-            const bal = Number(p.total) - Number(p.paid);
-            const st = Number(p.paid) >= Number(p.total) ? 'Paid' : Number(p.paid) > 0 ? 'Partial' : 'Unpaid';
-            const stCls = Number(p.paid) >= Number(p.total) ? 'paid' : Number(p.paid) > 0 ? 'partial' : 'pending';
+            const bal = Number(p.balancePayable);
+            const st = bal <= 0 ? 'Paid' : bal < Number(p.total) ? 'Partial' : 'Unpaid';
+            const stCls = bal <= 0 ? 'paid' : bal < Number(p.total) ? 'partial' : 'pending';
             return (
               <div key={p.id} className="erp-mobile-card">
                 <div className="erp-mobile-card-header">
@@ -170,7 +226,7 @@ export default function Purchases() {
                   <button title="View" onClick={async () => setDetails(await get(p.id))}>
                     <Eye size={16} /> <span>View</span>
                   </button>
-                  <button title="Edit" onClick={async () => setForm(await get(p.id))}>
+                  <button title="Edit" onClick={async () => { const purchase=await get(p.id); if(!purchase)return; setSupplierId(purchase.supplierId); setForm(purchase); setPaid((Number(purchase.paid||0)+Number(purchase.accountPaid||0)).toFixed(3)); setLines(purchase.items?.length?purchase.items.map((line:PurchaseLine)=>({...line,quantity:String(line.quantity),unitPrice:String(line.unitPrice),lineTotal:String(line.lineTotal)})):[{...blankLine(),itemName:purchase.description||'Purchase item',quantity:'1',unitPrice:(Number(purchase.total)/1000).toFixed(3),lineTotal:(Number(purchase.total)/1000).toFixed(3)}]); }}>
                     <Pencil size={16} /> <span>Edit</span>
                   </button>
                   <button className="danger" title="Delete" onClick={() => setRemove(p)}>
@@ -192,38 +248,46 @@ export default function Purchases() {
       </section>
 
       {form !== undefined && (
-        <div className="modal no-print">
+        <div className="modal sales-editor-modal no-print">
           <div className="modal-backdrop" onClick={() => setForm(undefined)} />
-          <section className="supplier-form card purchase-editor">
+          <section className="supplier-form card purchase-editor sales-editor">
             <button className="sheet-close" onClick={() => setForm(undefined)}>
               <X />
             </button>
             <h2>{form ? 'Edit purchase' : 'Add purchase'}</h2>
             <form onSubmit={save}>
               <FormSearchableSelect
-                key={form?.id || 'new'}
+                key={`${form?.id || 'new'}-${form?.supplierId || ''}`}
                 items={suppliers}
                 initialValue={form?.supplierId || ''}
+                onSelect={setSupplierId}
                 label="Supplier"
                 placeholder="Search or choose a supplier…"
                 name="supplierId"
               />
+              <label>Existing Balance Amount (AED)<input readOnly value={supplierBalanceError || (supplierId ? supplierBalance===null ? 'Loading…' : money3(existingBalance) : 'Select a supplier')} aria-live="polite" /></label>
               <label>
                 Date
                 <input name="date" type="date" required defaultValue={form?.purchaseDate || new Date().toISOString().slice(0, 10)} />
               </label>
-              <label>
-                Description
-                <textarea name="description" defaultValue={form?.description} />
-              </label>
-              <label>
-                Purchase amount (AED)
-                <input name="total" type="number" min=".01" step=".01" required defaultValue={form?.total} />
-              </label>
-              <label>
-                Paid amount (AED)
-                <input name="paid" type="number" min="0" step=".01" required defaultValue={form?.paid ?? '0'} />
-              </label>
+              <div className="sale-lines">
+                <div className="sale-lines-head"><b>Purchase items</b><button type="button" className="outline" onClick={()=>setLines(current=>[...current,blankLine()])}><Plus size={15}/> Add item</button></div>
+                <table className="sales-entry-table"><colgroup><col className="entry-item"/><col className="entry-qty"/><col className="entry-rate"/><col className="entry-amount"/><col className="entry-action"/></colgroup>
+                  <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th><th>Action</th></tr></thead>
+                  <tbody>{lines.map((line,index)=><tr className="sale-line" key={index}>
+                    <td><input aria-label={`Item name ${index+1}`} type="text" required maxLength={250} autoCapitalize="characters" spellCheck={false} value={line.itemName} list="purchase-item-options" placeholder="Enter item name" onChange={e=>{const value=e.target.value.toUpperCase();setLines(current=>current.map((x,i)=>i===index?{...x,itemName:value,itemId:items.find(item=>item.name.toLowerCase()===value.toLowerCase())?.id||''}:x));}} /></td>
+                    <td><input aria-label={`Quantity ${index+1}`} type="text" inputMode="decimal" required pattern="[0-9]+(\.[0-9]{1,3})?" value={line.quantity} onChange={e=>changeLine(index,'quantity',e.target.value)}/></td>
+                    <td><input aria-label={`Rate ${index+1}`} type="text" inputMode="decimal" required pattern="[0-9]+(\.[0-9]{1,3})?" value={line.unitPrice} onChange={e=>changeLine(index,'unitPrice',e.target.value)} onFocus={e=>e.currentTarget.select()}/></td>
+                    <td><input aria-label={`Amount ${index+1}`} readOnly value={line.lineTotal}/></td>
+                    <td><div className="entry-actions"><button type="button" className="line-remove danger" data-delete-confirmation-ignore="true" aria-label="Remove purchase item" title="Remove item" onClick={()=>setLines(current=>current.filter((_,i)=>i!==index))}><Trash2 size={14}/></button><button type="button" className="outline line-next" aria-label="Add another purchase item" onClick={()=>setLines(current=>[...current.slice(0,index+1),blankLine(),...current.slice(index+1)])}><Plus size={14}/></button></div></td>
+                  </tr>)}</tbody>
+                </table>
+                <datalist id="purchase-item-options">{items.map(item=><option key={item.id} value={item.name}>{item.code}</option>)}</datalist>
+              </div>
+              <div className="sale-form-grid">
+                <label>Purchase total (AED)<input readOnly value={money3(subtotal)} /></label>
+                <label>Paid amount (AED)<input name="paid" type="number" min="0" max={(grandTotal/1000).toFixed(3)} step="any" required value={paid} onChange={e=>setPaid(e.target.value)} /></label>
+              </div>
               <label>
                 Method
                 <select name="method" defaultValue={form?.paymentMethod || 'Cash'}>
@@ -232,12 +296,11 @@ export default function Purchases() {
                   <option>Bank Transfer</option>
                 </select>
               </label>
-              <label>
-                Notes
-                <input name="notes" defaultValue={form?.notes} />
-              </label>
+              <label>Notes<textarea name="notes" defaultValue={form?.notes} /></label>
+              <div className="sale-totals purchase-totals"><span>Total Item Amount<b>{money3(subtotal)}</b></span><span>Existing Balance Amount<b>{money3(existingBalance)}</b></span><span>Grand Total<b>{money3(grandTotal)}</b></span><span>Paid Amount<b>{money3(toMilli(paid))}</b></span><span>Remaining Balance<b>{money3(balance)}</b></span></div>
+              {supplierBalanceError && <div className="form-error" role="alert">{supplierBalanceError}</div>}
               {error && <div className="form-error">{error}</div>}
-              <button className="primary">{form ? 'Update purchase' : 'Create purchase'}</button>
+              <button className="primary" disabled={supplierBalance===null||!!supplierBalanceError}>{form ? 'Update purchase' : 'Create purchase'}</button>
             </form>
           </section>
         </div>
@@ -267,19 +330,14 @@ export default function Purchases() {
                 Status<b className={'status ' + status(details).toLowerCase()}>{status(details)}</b>
               </span>
             </div>
-            <p className="detail-note">{details.description || 'No description provided.'}</p>
-            <div className="financial-flow" style={{ flexWrap: 'wrap' }}>
-              <span>
-                Total<b>{money(details.total)}</b>
-              </span>
-              <i>→</i>
-              <span>
-                Paid<b>{money(details.paid)}</b>
-              </span>
-              <i>→</i>
-              <span>
-                Balance<b>{money(Number(details.total) - Number(details.paid))}</b>
-              </span>
+            {details.items?.length ? <div className="sale-item-table"><table><thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Rate (AED)</th><th>Total (AED)</th></tr></thead><tbody>{details.items.map((line,index)=><tr key={line.id}><td>{index+1}</td><td>{line.itemName}</td><td>{Number(line.quantity)} {line.unit||''}</td><td>{moneyPurchase(line.unitPrice)}</td><td>{moneyPurchase(line.lineTotal)}</td></tr>)}</tbody></table></div> : <p className="detail-note">{details.description || 'No description provided.'}</p>}
+            {details.notes && <p className="detail-note">{details.notes}</p>}
+              <div className="sale-totals purchase-detail-totals">
+              <span>Total Item Amount<b>{moneyPurchase(details.total)}</b></span>
+              <span>Existing Balance Amount<b>{moneyPurchase(details.existingBalance || 0)}</b></span>
+              <span>Grand Total<b>{moneyPurchase(Number(details.total)+Number(details.existingBalance||0))}</b></span>
+              <span>Paid Amount<b>{moneyPurchase(Number(details.paid)+Number(details.accountPaid||0))}</b></span>
+              <span>Remaining Balance<b>{moneyPurchase(Number(details.total)+Number(details.existingBalance||0)-Number(details.paid)-Number(details.accountPaid||0))}</b></span>
             </div>
             <button
               className="primary"
@@ -319,9 +377,9 @@ export default function Purchases() {
 }
 
 function PurchaseDocument({ purchase, close }: { purchase: D; close: () => void }) {
+  const itemsKey = JSON.stringify(purchase.items || []);
   useEffect(() => {
     const download = async () => {
-      const balance = Number(purchase.total) - Number(purchase.paid);
       const business = await fetch('/api/business-settings')
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null);
@@ -337,20 +395,15 @@ function PurchaseDocument({ purchase, close }: { purchase: D; close: () => void 
             ['Reference', purchase.invoiceNumber],
           ],
           summary: [
-            ['Purchase Total', money(purchase.total)],
-            ['Paid Amount', money(purchase.paid)],
-            ['Balance Amount', money(balance)],
+            ['Total Item Amount', moneyPurchase(purchase.total)],
+            ['Existing Balance Amount', moneyPurchase(purchase.existingBalance || 0)],
+            ['Grand Total', moneyPurchase(Number(purchase.total)+Number(purchase.existingBalance||0))],
+            ['Paid Amount', moneyPurchase(Number(purchase.paid)+Number(purchase.accountPaid||0))],
+            ['Remaining Balance', moneyPurchase(Number(purchase.total)+Number(purchase.existingBalance||0)-Number(purchase.paid)-Number(purchase.accountPaid||0))],
           ],
-          headers: ['Description', 'Purchase Amount', 'Payment', 'Balance', 'Method / Status'],
-          rows: [
-            [
-              purchase.description || 'Purchase bill',
-              money(purchase.total),
-              money(purchase.paid),
-              money(balance),
-              `${purchase.paymentMethod || '—'} · ${status(purchase)}`,
-            ],
-          ],
+          sales: { date:shortDate(purchase.purchaseDate), status:status(purchase), method:purchase.paymentMethod||'—', contact:purchase.supplierMobile||'', address:purchase.supplierAddress||'' },
+          headers: ['#', 'Item Description', 'Qty', 'Rate (AED)', 'Total (AED)'],
+          rows: purchase.items?.length ? purchase.items.map((line,index)=>[String(index+1),line.itemName,`${Number(line.quantity)} ${line.unit||''}`.trim(),Number(line.unitPrice).toFixed(3),Number(line.lineTotal).toFixed(3)]) : [['1',purchase.description||'Purchase bill','1',Number(purchase.total).toFixed(3),Number(purchase.total).toFixed(3)]],
           notes: purchase.notes,
         },
         `${purchase.invoiceNumber}.pdf`
@@ -358,6 +411,6 @@ function PurchaseDocument({ purchase, close }: { purchase: D; close: () => void 
       close();
     };
     void download();
-  }, [purchase, close]);
+  }, [purchase, close, itemsKey]);
   return null;
 }

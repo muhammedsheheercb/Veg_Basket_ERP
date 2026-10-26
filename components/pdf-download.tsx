@@ -18,7 +18,7 @@ export function Doc({data}:{data:PdfData}) {
  const invoice=data.kind==='Sales Invoice'||data.kind==='Purchase Bill'||data.kind==='Price List'||data.kind==='Invoice';
  const statement=data.kind==='Supplier Statement'||data.kind==='Customer Statement';
  const statementHasReference=data.headers.includes('Reference');
- const cell=(i:number)=>(data.kind==='Sales Invoice'||data.kind==='Price List'||data.kind==='Invoice')?[s.cell,i===0?s.index:i===1?s.desc:i===2?s.qty:s.amount]:data.kind==='Purchase Bill'?[s.cell,i===0?s.statementDesc:i>=1&&i<=3?s.amount:s.status]:[s.cell,i===0?s.date:i===1?s.type:statementHasReference?(i===2?s.reference:i===3?s.statementDesc:i>=4&&i<=6?s.amount:s.status):(i===2?s.statementDesc:i>=3&&i<=5?s.amount:s.status)];
+ const cell=(i:number)=>(data.kind==='Sales Invoice'||data.kind==='Purchase Bill'||data.kind==='Price List'||data.kind==='Invoice')?[s.cell,i===0?s.index:i===1?s.desc:i===2?s.qty:s.amount]:[s.cell,i===0?s.date:i===1?s.type:statementHasReference?(i===2?s.reference:i===3?s.statementDesc:i>=4&&i<=6?s.amount:s.status):(i===2?s.statementDesc:i>=3&&i<=5?s.amount:s.status)];
  const emphasized=(label:string)=>['Grand Total','Current Outstanding','Outstanding Balance','Balance Amount','Remaining Balance'].includes(label);
  return <Document title={data.title} author="Veg Basket ERP"><Page size="A4" style={s.page} wrap>
   <View style={s.header} fixed={!statement}><View style={s.company}><Text style={s.companyName}>Veg Basket</Text>{(data.business || []).map((x,i)=><Text key={i} style={s.companyLine}>{x}</Text>)}</View><View style={s.doc}><Text style={s.kind}>{data.kind.toUpperCase()}</Text><Text style={s.number}>{data.title}</Text></View></View>

@@ -7,11 +7,12 @@ import { downloadPdf } from '@/components/pdf-download';
 
 type S = { id: string; name: string; mobile: string; address?: string; openingBalance: string; totalPurchases: string; totalPaid: string; payable: number };
 type Bill = { id: string; invoiceNumber: string; purchaseDate: string; description?: string; total: string; paid: string; paymentMethod?: string; notes?: string };
-type Pay = { id: string; purchaseId: string; paymentDate: string; amount: string; method: string; notes?: string };
+type Pay = { id: string; purchaseId: string | null; paymentDate: string; amount: string; method: string; notes?: string };
 type L = { supplier: S; bills: Bill[]; payments: Pay[]; summary: { openingBalance: number; totalPurchases: number; totalPaid: number; payable: number } };
 
 const status = (paid: number, total: number) => paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid';
 const today = new Date().toISOString().slice(0, 10);
+const preciseMoney = (value:number) => `AED ${value.toLocaleString('en-AE',{minimumFractionDigits:3,maximumFractionDigits:3})}`;
 
 function makeEntries(l: L) {
   const items: any[] = [];
@@ -29,7 +30,7 @@ function makeEntries(l: L) {
   for (const p of l.payments) {
     const b = l.bills.find(x => x.id === p.purchaseId);
     const ref = b ? b.invoiceNumber : 'PAYMENT';
-    items.push({ date: p.paymentDate, type: 'Supplier Payment', reference: ref, description: `Payment for ${ref}`, purchase: 0, payment: +p.amount, method: p.method, status: b ? status(+b.paid, +b.total) : undefined, notes: p.notes });
+    items.push({ date: p.paymentDate, type: 'Supplier Payment', reference: ref, description: b ? `Payment for ${ref}` : p.notes || 'Payment toward supplier balance', purchase: 0, payment: +p.amount, method: p.method, status: b ? status(+b.paid, +b.total) : undefined, notes: p.notes });
   }
   items.sort((a, b) => {
     if (!a.date) return -1;
@@ -50,7 +51,6 @@ export default function Suppliers() {
   const [ledger, setLedger] = useState<L | null>(null);
   const [remove, setRemove] = useState<S | null>(null);
   const [error, setError] = useState('');
-  const [selected, setSelected] = useState('');
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const statementRef = useRef<HTMLElement>(null);
 
@@ -99,8 +99,7 @@ export default function Suppliers() {
     else { setRemove(null); load(); }
   }
 
-  const openingPaid = ledger ? ledger.payments.filter(payment => !payment.purchaseId).reduce((sum, payment) => sum + +payment.amount, 0) : 0;
-  const outstanding = ledger && selected ? selected === 'opening' ? +ledger.summary.openingBalance - openingPaid : +ledger.bills.find(b => b.id === selected)!.total - +ledger.bills.find(b => b.id === selected)!.paid : 0;
+  const outstanding = ledger ? Math.max(0, Number(ledger.summary.payable)) : 0;
 
   return (
     <main className="management">
@@ -169,7 +168,6 @@ export default function Suppliers() {
                     disabled={loadingId === s.id + "-ledger"}
                     onClick={async () => {
                       setLoadingId(s.id + "-ledger");
-                      setSelected("");
                       const data = await get(s.id);
                       setLedger(data);
                       setLoadingId(null);
@@ -241,7 +239,6 @@ export default function Suppliers() {
                     disabled={loadingId === s.id + "-ledger"}
                     onClick={async () => {
                       setLoadingId(s.id + "-ledger");
-                      setSelected("");
                       const data = await get(s.id);
                       setLedger(data);
                       setLoadingId(null);
@@ -414,20 +411,9 @@ export default function Suppliers() {
                 Payable<b>{money(ledger.summary.payable)}</b>
               </span>
             </div>
-            {ledger.bills.map((b) => (
-              <div className="ledger-line" key={b.id}>
-                <span>
-                  <b>{b.invoiceNumber}</b>
-                  <small>{shortDate(b.purchaseDate)}</small>
-                </span>
-                <span>{money(b.total)}</span>
-                <span>Paid {money(b.paid)}</span>
-                <b>{money(+b.total - +b.paid)}</b>
-              </div>
-            ))}
             <h3>Make payment</h3>
             <form
-              className="pay-form"
+              className="pay-form supplier-account-pay-form"
               onSubmit={async (e) => {
                 e.preventDefault();
                 setError("");
@@ -447,7 +433,7 @@ export default function Suppliers() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                      purchaseId: d.get("purchaseId"),
+                      purchaseId: "account",
                       date: d.get("date"),
                       amount,
                       method: d.get("method"),
@@ -456,7 +442,6 @@ export default function Suppliers() {
                   },
                 );
                 if (r.ok) {
-                  setSelected("");
                   setLedger(null);
                   // Close the payment form and its enclosing ledger before
                   // refreshing the list. Replacing `ledger` with refreshed
@@ -465,35 +450,16 @@ export default function Suppliers() {
                 } else setError((await r.json()).error);
               }}
             >
-              <select
-                name="purchaseId"
-                required
-                value={selected}
-                onChange={(e) => setSelected(e.target.value)}
-              >
-                <option value="">Select purchase bill</option>
-                {+ledger.summary.openingBalance > openingPaid && <option value="opening">Opening Balance · outstanding {money(+ledger.summary.openingBalance - openingPaid)}</option>}
-                {ledger.bills
-                  .filter((b) => +b.paid < +b.total)
-                  .map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.invoiceNumber} · outstanding{" "}
-                      {money(+b.total - +b.paid)}
-                    </option>
-                  ))}
-              </select>
-              {selected && (
-                <p className="payment-hint">
-                  Outstanding for selected bill: <b>{money(outstanding)}</b>
-                </p>
-              )}
+              <p className="payment-hint supplier-payable-hint">
+                Current supplier balance: <b>{preciseMoney(outstanding)}</b>
+              </p>
               <input name="date" type="date" required defaultValue={today} />
               <input
                 name="amount"
                 type="number"
                 min=".01"
-                max={selected ? outstanding : undefined}
-                step=".01"
+                max={outstanding}
+                step=".001"
                 required
                 placeholder="Amount"
               />
@@ -504,7 +470,7 @@ export default function Suppliers() {
               </select>
               <input name="notes" placeholder="Notes" />
               {error && <div className="form-error">{error}</div>}
-              <button className="primary">Record payment</button>
+              <button className="primary" disabled={outstanding <= 0}>Record payment</button>
             </form>
           </section>
         </div>

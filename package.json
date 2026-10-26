@@ -16,7 +16,10 @@
     "db:migrate-price-lists": "node --env-file=.env scripts/migrate-price-lists.mjs",
     "db:migrate-sales-manual-items": "node --env-file=.env scripts/migrate-sales-manual-items.mjs",
     "db:migrate-sales-payment-summary": "node --env-file=.env scripts/migrate-sales-payment-summary.mjs",
-    "db:migrate-sales-rate-precision": "node --env-file=.env scripts/migrate-sales-rate-precision.mjs"
+    "db:migrate-sales-rate-precision": "node --env-file=.env scripts/migrate-sales-rate-precision.mjs",
+    "db:migrate-purchase-items": "node --env-file=.env scripts/migrate-purchase-items.mjs",
+    "db:migrate-purchase-payment-summary": "node --env-file=.env scripts/migrate-purchase-payment-summary.mjs",
+    "db:migrate-supplier-payment-precision": "node --env-file=.env scripts/migrate-supplier-payment-precision.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
@@ -27,12 +30,12 @@
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.12",
     "lucide-react": "^0.468.0",
-    "next": "latest",
+    "next": "16.4.3",
     "pg": "^8.23.0",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",

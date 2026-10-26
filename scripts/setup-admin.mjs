@@ -16,17 +16,27 @@ await client.query(`CREATE TABLE IF NOT EXISTS suppliers (
   address text, opening_balance numeric(14,2) NOT NULL DEFAULT 0,
   active boolean NOT NULL DEFAULT true, created_at timestamp NOT NULL DEFAULT now()
 )`);
+await client.query(`CREATE TABLE IF NOT EXISTS items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), code text NOT NULL UNIQUE, name text NOT NULL,
+  description text, active boolean NOT NULL DEFAULT true, created_at timestamp NOT NULL DEFAULT now()
+)`);
 await client.query(`CREATE TABLE IF NOT EXISTS purchases (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), invoice_number text NOT NULL UNIQUE,
   supplier_id uuid NOT NULL REFERENCES suppliers(id), purchase_date date NOT NULL,
-  description text, total numeric(14,2) NOT NULL CHECK(total >= 0),
-  paid numeric(14,2) NOT NULL DEFAULT 0 CHECK(paid >= 0 AND paid <= total),
+  description text, total numeric(14,3) NOT NULL CHECK(total >= 0),
+  paid numeric(14,3) NOT NULL DEFAULT 0 CHECK(paid >= 0 AND paid <= total),
+  existing_balance numeric(15,3), account_paid numeric(15,3) NOT NULL DEFAULT 0, account_payment_id uuid,
   payment_method text, notes text, created_at timestamp NOT NULL DEFAULT now()
+)`);
+await client.query(`CREATE TABLE IF NOT EXISTS purchase_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), purchase_id uuid NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
+  item_id uuid REFERENCES items(id), item_name text NOT NULL, position integer NOT NULL DEFAULT 0,
+  quantity numeric(14,3) NOT NULL, unit text, unit_price numeric(15,3) NOT NULL, line_total numeric(15,3) NOT NULL
 )`);
 await client.query(`CREATE TABLE IF NOT EXISTS supplier_payments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), supplier_id uuid NOT NULL REFERENCES suppliers(id),
-  purchase_id uuid NOT NULL REFERENCES purchases(id), payment_date date NOT NULL,
-  amount numeric(14,2) NOT NULL CHECK(amount > 0), method text NOT NULL, notes text,
+  purchase_id uuid REFERENCES purchases(id), payment_date date NOT NULL,
+  amount numeric(14,3) NOT NULL CHECK(amount > 0), method text NOT NULL, notes text,
   idempotency_key text UNIQUE,
   created_at timestamp NOT NULL DEFAULT now()
 )`);

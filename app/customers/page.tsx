@@ -215,12 +215,8 @@ export default function Customers() {
       },
     );
     if (r.ok) {
-      const updated = await get(ledger.customer.id);
-      if (updated) setLedger(updated);
-      paymentForm.reset();
-      setPaymentAmount("");
-      setPaymentTouched(false);
       await load();
+      closeLedger();
     } else {
       setError((await r.json()).error);
     }
@@ -542,17 +538,6 @@ function CustomerLedger({
             Outstanding<b>{money(s.outstanding)}</b>
           </span>
         </div>
-        {ledger.sales.map((x: any) => (
-          <div className="ledger-line" key={x.id}>
-            <span>
-              <b>{x.invoiceNumber}</b>
-              <small>{x.saleDate}</small>
-            </span>
-            <span>{money(x.total)}</span>
-            <span>Paid {money(x.paid)}</span>
-            <b>{money(+x.total - +x.paid)}</b>
-          </div>
-        ))}
         <h3>Record payment</h3>
         <form className="pay-form" onSubmit={pay} noValidate>
           <p className="payment-hint">Current Outstanding Balance <b>{money(due)}</b></p>
@@ -588,15 +573,6 @@ function CustomerLedger({
             {busy ? "Processing…" : "Record payment"}
           </button>}
         </form>
-        <h3>Payment history</h3>
-        {(ledger.payments || []).map((payment: any) => (
-          <div className="ledger-line" key={payment.id}>
-            <span><b>{payment.paymentDate}</b><small>{payment.notes || 'Customer payment'}</small></span>
-            <span>{money(payment.amount)}</span>
-            <span>{payment.method}</span>
-            <span>{payment.invoiceNumber || 'Account payment'}</span>
-          </div>
-        ))}
       </section>
     </div>
   );

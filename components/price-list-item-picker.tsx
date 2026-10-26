@@ -142,6 +142,7 @@ export { PriceListItemPicker as SearchableSelect };
 
 export function FormSearchableSelect({
   initialValue = '',
+  onSelect,
   ...props
 }: {
   items: Item[];
@@ -149,7 +150,8 @@ export function FormSearchableSelect({
   label: string;
   placeholder: string;
   name: string;
+  onSelect?: (id: string) => void;
 }) {
   const [selectedId, setSelectedId] = useState(initialValue);
-  return <PriceListItemPicker {...props} selectedId={selectedId} onSelect={setSelectedId} />;
+  return <PriceListItemPicker {...props} selectedId={selectedId} onSelect={id => { setSelectedId(id); onSelect?.(id); }} />;
 }
