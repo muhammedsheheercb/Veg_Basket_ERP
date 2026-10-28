@@ -121,7 +121,7 @@ export default function Purchases() {
         items: lines,
         paid,
         method: d.get('method'),
-        notes: d.get('notes'),
+        notes: d.get('notes') || '',
       }),
     });
     if (!r.ok) setError((await r.json()).error);
@@ -268,7 +268,7 @@ export default function Purchases() {
               <label>Existing Balance Amount (AED)<input readOnly value={supplierBalanceError || (supplierId ? supplierBalance===null ? 'Loading…' : money3(existingBalance) : 'Select a supplier')} aria-live="polite" /></label>
               <label>
                 Date
-                <input name="date" type="date" required defaultValue={form?.purchaseDate || new Date().toISOString().slice(0, 10)} />
+                <input name="date" type="date" max={new Date().toISOString().slice(0, 10)} required defaultValue={form?.purchaseDate || new Date().toISOString().slice(0, 10)} />
               </label>
               <div className="sale-lines">
                 <div className="sale-lines-head"><b>Purchase items</b><button type="button" className="outline" onClick={()=>setLines(current=>[...current,blankLine()])}><Plus size={15}/> Add item</button></div>

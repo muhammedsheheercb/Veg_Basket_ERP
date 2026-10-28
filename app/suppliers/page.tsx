@@ -453,7 +453,7 @@ export default function Suppliers() {
               <p className="payment-hint supplier-payable-hint">
                 Current supplier balance: <b>{preciseMoney(outstanding)}</b>
               </p>
-              <input name="date" type="date" required defaultValue={today} />
+              <input name="date" type="date" max={today} required defaultValue={today} />
               <input
                 name="amount"
                 type="number"
