@@ -22,7 +22,7 @@ export async function PUT(request:Request,{params}:{params:Promise<{id:string}>}
     const result=await db.transaction(async tx=>{
       const [previous]=await tx.select().from(purchases).where(eq(purchases.id,id));
       if(!previous)throw Error('Purchase not found.');
-      const payment=await splitPurchasePayment(tx,{supplierId:parsed.data.supplierId,paid,total,date:parsed.data.date,method:parsed.data.method,notes:parsed.data.notes},previous);
+      const payment=await splitPurchasePayment(tx,{supplierId:parsed.data.supplierId,paid,total,date:parsed.data.date,method:parsed.data.method||undefined,notes:parsed.data.notes||undefined},previous);
       const billPayments=await tx.select({amount:supplierPayments.amount}).from(supplierPayments).where(eq(supplierPayments.purchaseId,id));
       if(payment.invoicePaid/1000<billPayments.reduce((sum,row)=>sum+Number(row.amount),0))throw Error('Paid amount cannot be lower than recorded purchase payments.');
       const [purchase]=await tx.update(purchases).set({supplierId:parsed.data.supplierId,purchaseDate:parsed.data.date,description:validLines.map(line=>line.itemName).join(', ').slice(0,500),total:(total/1000).toFixed(3),paid:(payment.invoicePaid/1000).toFixed(3),existingBalance:(payment.existingBalance/1000).toFixed(3),accountPaid:(payment.accountPaid/1000).toFixed(3),accountPaymentId:payment.accountPaymentId,paymentMethod:parsed.data.method||null,notes:parsed.data.notes||null}).where(eq(purchases.id,id)).returning();
